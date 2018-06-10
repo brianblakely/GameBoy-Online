@@ -1,5 +1,5 @@
 /* eslint-disable */
-/* eslint-enable no-undef, no-unused-vars */
+/* eslint-enable no-undef */
 
 /*	SWFObject v2.2 <http://code.google.com/p/swfobject/>
 	is released under the MIT License <http://www.opensource.org/licenses/mit-license.php>
@@ -1285,6 +1285,32 @@ function base64ToArray(b64String) {
  * GNU General Public License for more details.
  *
  */
+function cout(message, level) {
+	let consoleMethod = `log`;
+
+	switch (level) {
+		case 0:
+			consoleMethod = `log`;
+			break;
+
+		case 1:
+			consoleMethod = `info`;
+			break;
+
+		case 2:
+			consoleMethod = `warn`;
+			break;
+
+		case 3:
+			consoleMethod = `error`;
+			break;
+
+		default:
+			break;
+	}
+
+  console[consoleMethod](message);
+}
 function GameBoyCore(canvas, ROMImage) {
 	//Params, etc...
 	this.canvas = canvas;						//Canvas DOM object for drawing out the graphics to.
