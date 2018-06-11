@@ -10853,6 +10853,19 @@ export function clearLastEmulation() {
 		cout("No previous emulation was found to be cleared.", 0);
 	}
 }
+
+function setValue(key, value) {
+	console.warn(`TODO: setValue() - key, value`, key, value);
+}
+
+function deleteValue(key) {
+	console.warn(`TODO: deleteValue() - key`, key);
+}
+
+function findValue(key) {
+	console.warn(`TODO: findValue() - key`, key);
+}
+
 function save() {
 	if (GameBoyEmulatorInitialized()) {
 		try {
