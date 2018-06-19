@@ -10854,19 +10854,55 @@ export function clearLastEmulation() {
   }
 }
 
+const persistValues = {};
+
 function setValue(key, value) {
-  console.warn(`TODO: setValue() - key, value`, key, value);
+  if(typeof value !== `string`) {
+    value = JSON.stringify(value);
+  }
+
+  persistValues[key] = value;
+
+  saveValue.push(key, value);
 }
 
 function deleteValue(key) {
-  console.warn(`TODO: deleteValue() - key`, key);
+  delete persistValues[key];
+
+  saveValue.push(key, null);
 }
 
 function findValue(key) {
-  console.warn(`TODO: findValue() - key`, key);
+  const value = persistValues[key];
+
+  if(!value) {
+    return value;
+  }
+
+  if(value[0] === `[` || value[0] === `{`) {
+    return JSON.parse(value);
+  }
+
+  return value;
 }
 
-function save() {
+export const saveValue = {
+  callbacks: [],
+
+  push(key, value) {
+    if(this.callbacks.length) {
+      for(const callback of this.callbacks) {
+        callback(key, value);
+      }
+    }
+  },
+
+  subscribe(callback) {
+    this.callbacks.push(callback);
+  }
+};
+
+export function saveState() {
   if (GameBoyEmulatorInitialized()) {
     try {
       var state_suffix = 0;
@@ -10972,7 +11008,7 @@ function openRTC(filename) {
   }
   return [];
 }
-function openState(filename, canvas) {
+export function openState(filename, canvas) {
   try {
     if (findValue(filename) != null) {
       try {
