@@ -10902,11 +10902,11 @@ export const saveValue = {
   }
 };
 
-export function saveState() {
+export function saveState(slot) {
   if (GameBoyEmulatorInitialized()) {
     try {
-      var state_suffix = 0;
-      while (findValue("FREEZE_" + gameboy.name + "_" + state_suffix) != null) {
+      var state_suffix = slot || 0;
+      while (!slot && findValue("FREEZE_" + gameboy.name + "_" + state_suffix) != null) {
         state_suffix++;
       }
       setValue("FREEZE_" + gameboy.name + "_" + state_suffix, gameboy.saveState());
