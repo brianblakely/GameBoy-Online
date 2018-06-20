@@ -10854,7 +10854,7 @@ export function clearLastEmulation() {
   }
 }
 
-const persistValues = {};
+export const persistValues = {};
 
 function setValue(key, value) {
   if(typeof value !== `string`) {
@@ -11008,7 +11008,9 @@ function openRTC(filename) {
   }
   return [];
 }
-export function openState(filename, canvas) {
+export function openState(slot, canvas) {
+  const filename = "FREEZE_" + gameboy.name + "_" + slot;
+
   try {
     if (findValue(filename) != null) {
       try {
