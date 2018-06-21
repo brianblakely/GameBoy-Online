@@ -10807,7 +10807,7 @@ export function start(canvas, ROM) {
   gameboy.start();
   run();
 }
-function run() {
+export function run() {
   if (GameBoyEmulatorInitialized()) {
     if (!GameBoyEmulatorPlaying()) {
       gameboy.stopEmulator &= 1;
