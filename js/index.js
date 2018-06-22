@@ -6962,10 +6962,10 @@ GameBoyCore.prototype.channel4UpdateCache = function () {
   this.cachedChannel4Sample = this.noiseSampleTable[this.channel4currentVolume | this.channel4lastSampleLookup];
   this.channel4OutputLevelCache();
 }
-GameBoyCore.prototype.run = function () {
+GameBoyCore.prototype.run = function (force) {
   //The preprocessing before the actual iteration loop:
-  if ((this.stopEmulator & 2) == 0) {
-    if ((this.stopEmulator & 1) == 1) {
+  if (force || (this.stopEmulator & 2) == 0) {
+    if (force || (this.stopEmulator & 1) == 1) {
       if (!this.CPUStopped) {
         this.stopEmulator = 0;
         this.audioUnderrunAdjustment();
@@ -10785,7 +10785,7 @@ GameBoyCore.prototype.getTypedArray = function (length, defaultValue, numberType
 
 "use strict";
 export var gameboy = null;						//GameBoyCore object.
-var gbRunInterval = null;				//GameBoyCore Timer
+export var gbRunInterval = null;				//GameBoyCore Timer
 export var settings = [						//Some settings.
   true, 								//Turn on sound.
   true,								//Boot with boot ROM first?
