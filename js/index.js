@@ -6261,10 +6261,15 @@ GameBoyCore.prototype.initLCD = function () {
       this.canvas.hasAttribute("style")
       && !this.canvas.getAttribute("style").includes(`image-rendering`)
     ) {
-      this.canvas.setAttribute("style", (this.canvas.getAttribute("style") || "") + "; image-rendering: " + ((settings[13]) ? "auto" : "-webkit-optimize-contrast") + ";" +
-      "image-rendering: " + ((settings[13]) ? "optimizeQuality" : "-o-crisp-edges") + ";" +
-      "image-rendering: " + ((settings[13]) ? "optimizeQuality" : "-moz-crisp-edges") + ";" +
-      "-ms-interpolation-mode: " + ((settings[13]) ? "bicubic" : "nearest-neighbor") + ";");
+      this.canvas.setAttribute(
+        "style",
+        (this.canvas.getAttribute("style") || "")
+        + "; image-rendering: " + ((settings[13]) ? "auto" : "-webkit-optimize-contrast") + ";"
+        + "; image-rendering: " + ((settings[13]) ? "auto" : "pixelated") + ";"
+        + "image-rendering: " + ((settings[13]) ? "optimizeQuality" : "-o-crisp-edges") + ";"
+        + "image-rendering: " + ((settings[13]) ? "optimizeQuality" : "-moz-crisp-edges") + ";"
+        + "-ms-interpolation-mode: " + ((settings[13]) ? "bicubic" : "nearest-neighbor") + ";"
+      );
     }
     this.drawContextOffscreen.webkitImageSmoothingEnabled  = settings[13];
     this.drawContextOffscreen.mozImageSmoothingEnabled = settings[13];
