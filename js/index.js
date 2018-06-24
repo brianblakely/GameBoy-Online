@@ -6258,8 +6258,8 @@ GameBoyCore.prototype.initLCD = function () {
     this.drawContextOffscreen = this.canvasOffscreen.getContext("2d");
     this.drawContextOnscreen = this.canvas.getContext("2d");
     if(
-      this.canvas.hasAttribute("style")
-      && !this.canvas.getAttribute("style").includes(`image-rendering`)
+      !this.canvas.hasAttribute("style")
+      || !this.canvas.getAttribute("style").includes(`image-rendering`)
     ) {
       this.canvas.setAttribute(
         "style",
