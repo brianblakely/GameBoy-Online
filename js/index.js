@@ -10921,8 +10921,13 @@ export function saveState(slot) {
       while (!slot && findValue("FREEZE_" + gameboy.name + "_" + state_suffix) != null) {
         state_suffix++;
       }
-      setValue("FREEZE_" + gameboy.name + "_" + state_suffix, gameboy.saveState());
+
+      const state = gameboy.saveState();
+
+      setValue("FREEZE_" + gameboy.name + "_" + state_suffix, state);
       cout("Saved the current state as: FREEZE_" + gameboy.name + "_" + state_suffix, 0);
+
+      return state;
     }
     catch (error) {
       cout("Could not save the current emulation state(\"" + error.message + "\").", 2);
@@ -11028,7 +11033,9 @@ export function openState(slot, canvas) {
       try {
         clearLastEmulation();
         cout("Attempting to run a saved emulation state.", 0);
+        const { ROM } = gameboy;
         gameboy = new GameBoyCore(canvas, "");
+        gameboy.ROM = ROM;
         gameboy.savedStateFileName = filename;
         gameboy.returnFromState(findValue(filename));
         run();
