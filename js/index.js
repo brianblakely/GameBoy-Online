@@ -1230,6 +1230,10 @@ function base64ToArray(b64String) {
  *
  */
 function cout(message, level) {
+  if(process.env.NODE_ENV === `production`) {
+    return false;
+  }
+
   let consoleMethod = `log`;
 
   switch (level) {
