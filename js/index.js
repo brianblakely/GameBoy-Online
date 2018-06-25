@@ -10856,7 +10856,7 @@ export function pause() {
   }
 }
 export function clearLastEmulation() {
-  if (GameBoyEmulatorInitialized() && GameBoyEmulatorPlaying()) {
+  if (GameBoyEmulatorPlaying()) {
     clearInterval(gbRunInterval);
     gameboy.stopEmulator |= 2;
     cout("The previous emulation has been cleared.", 0);
@@ -11195,27 +11195,27 @@ function GameBoyEmulatorInitialized() {
   return (typeof gameboy == "object" && gameboy != null);
 }
 export function GameBoyEmulatorPlaying() {
-  return ((gameboy.stopEmulator & 2) == 0);
+  return GameBoyEmulatorInitialized() && ((gameboy.stopEmulator & 2) == 0);
 }
 function GameBoyKeyDown(key) {
-  if (GameBoyEmulatorInitialized() && GameBoyEmulatorPlaying()) {
+  if (GameBoyEmulatorPlaying()) {
     GameBoyJoyPadEvent(matchKey(key), true);
   }
 }
 export function GameBoyJoyPadEvent(keycode, down) {
-  if (GameBoyEmulatorInitialized() && GameBoyEmulatorPlaying()) {
+  if (GameBoyEmulatorPlaying()) {
     if (keycode >= 0 && keycode < 8) {
       gameboy.JoyPadEvent(keycode, down);
     }
   }
 }
 function GameBoyKeyUp(key) {
-  if (GameBoyEmulatorInitialized() && GameBoyEmulatorPlaying()) {
+  if (GameBoyEmulatorPlaying()) {
     GameBoyJoyPadEvent(matchKey(key), false);
   }
 }
 function GameBoyGyroSignalHandler(e) {
-  if (GameBoyEmulatorInitialized() && GameBoyEmulatorPlaying()) {
+  if (GameBoyEmulatorPlaying()) {
     if (e.gamma || e.beta) {
       gameboy.GyroEvent(e.gamma * Math.PI / 180, e.beta * Math.PI / 180);
     }
