@@ -5202,7 +5202,6 @@ GameBoyCore.prototype.saveRTCState = function () {
 }
 GameBoyCore.prototype.saveState = function () {
   return [
-    this.fromTypedArray(this.ROM),
     this.inBootstrap,
     this.registerA,
     this.FZero,
@@ -5414,7 +5413,6 @@ GameBoyCore.prototype.saveState = function () {
 GameBoyCore.prototype.returnFromState = function (returnedFrom) {
   var index = 0;
   var state = returnedFrom.slice(0);
-  this.ROM = this.toTypedArray(state[index++], "uint8");
   this.ROMBankEdge = Math.floor(this.ROM.length / 0x4000);
   this.inBootstrap = state[index++];
   this.registerA = state[index++];
