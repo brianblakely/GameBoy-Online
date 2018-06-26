@@ -11230,7 +11230,7 @@ function matchKey(key) {	//Maps a keyboard key to a gameboy key.
   }
   return -1;
 }
-function GameBoyEmulatorInitialized() {
+export function GameBoyEmulatorInitialized() {
   return (typeof gameboy == "object" && gameboy != null);
 }
 export function GameBoyEmulatorPlaying() {
