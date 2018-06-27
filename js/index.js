@@ -10845,6 +10845,18 @@ export function start(canvas, ROM) {
   gameboy.start();
   run();
 }
+export function stop() {
+  if(!GameBoyEmulatorInitialized()) {
+    cout("GameBoy core cannot be stopped while it has not been initialized.", 1);
+    return false;
+  }
+
+  clearLastEmulation();
+  gameboy.canvas.width = gameboy.canvas.width;
+  gameboy = null;
+
+  return true;
+}
 export function run() {
   if (GameBoyEmulatorInitialized()) {
     if (!GameBoyEmulatorPlaying()) {
