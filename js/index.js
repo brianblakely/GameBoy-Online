@@ -362,6 +362,9 @@ XAudioServer.prototype.initializeAudio = function () {
         }
     }
 }
+XAudioServer.prototype.disconnect = function () {
+  XAudioJSWebAudioAudioNode.disconnect(0);
+};
 XAudioServer.prototype.initializeMediaStream = function () {
   this.audioHandleMediaStream = new Audio();
   this.resetCallbackAPIAudioBuffer(XAudioJSMediaStreamSampleRate);
@@ -545,7 +548,7 @@ function XAudioJSGenerateFlashMonoString() {	//Convert the array to one long str
   return XAudioJSBinaryString.join("");
 }
 //Some Required Globals:
-var XAudioJSWebAudioContextHandle = null;
+export var XAudioJSWebAudioContextHandle = null;
 var XAudioJSWebAudioAudioNode = null;
 var XAudioJSWebAudioWatchDogTimer = null;
 var XAudioJSWebAudioWatchDogLast = false;
@@ -6379,6 +6382,11 @@ GameBoyCore.prototype.initSound = function () {
     this.audioHandle.changeVolume(0);
   }
 }
+GameBoyCore.prototype.stopSound = function () {
+  if (this.audioHandle) {
+    this.audioHandle.disconnect();
+  }
+};
 GameBoyCore.prototype.changeVolume = function () {
   if (settings[0] && this.audioHandle) {
     this.audioHandle.changeVolume(settings[3]);
