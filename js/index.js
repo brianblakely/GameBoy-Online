@@ -5204,7 +5204,7 @@ GameBoyCore.prototype.saveRTCState = function () {
   }
 }
 GameBoyCore.prototype.saveState = function () {
-  const sram = this.fromTypedArray(this.MBCRam);
+  const sram = this.MBCRam;
 
   const rtc = [
     this.lastIteration,
@@ -5242,11 +5242,11 @@ GameBoyCore.prototype.saveState = function () {
       this.hdmaRunning,
       this.CPUTicks,
       this.doubleSpeedShifter,
-      this.fromTypedArray(this.memory),
+      this.memory,
       sram,
-      this.fromTypedArray(this.VRAM),
+      this.VRAM,
       this.currVRAMBank,
-      this.fromTypedArray(this.GBCMemory),
+      this.GBCMemory,
       this.MBC1Mode,
       this.MBCRAMBanksEnabled,
       this.currMBCRAMBank,
@@ -5295,7 +5295,7 @@ GameBoyCore.prototype.saveState = function () {
       this.cHuC3,
       this.cHuC1,
       this.drewBlank,
-      this.fromTypedArray(this.frameBuffer),
+      this.frameBuffer,
       this.bgEnabled,
       this.BGPriorityEnabled,
       this.channel1FrequencyTracker,
@@ -5328,7 +5328,7 @@ GameBoyCore.prototype.saveState = function () {
       this.channel3patternType,
       this.channel3frequency,
       this.channel3consecutive,
-      this.fromTypedArray(this.channel3PCM),
+      this.channel3PCM,
       this.channel4FrequencyPeriod,
       this.channel4lastSampleLookup,
       this.channel4totalLength,
@@ -5409,18 +5409,18 @@ GameBoyCore.prototype.saveState = function () {
       this.numRAMBanks,
       this.windowY,
       this.windowX,
-      this.fromTypedArray(this.gbcOBJRawPalette),
-      this.fromTypedArray(this.gbcBGRawPalette),
-      this.fromTypedArray(this.gbOBJPalette),
-      this.fromTypedArray(this.gbBGPalette),
-      this.fromTypedArray(this.gbcOBJPalette),
-      this.fromTypedArray(this.gbcBGPalette),
-      this.fromTypedArray(this.gbBGColorizedPalette),
-      this.fromTypedArray(this.gbOBJColorizedPalette),
-      this.fromTypedArray(this.cachedBGPaletteConversion),
-      this.fromTypedArray(this.cachedOBJPaletteConversion),
-      this.fromTypedArray(this.BGCHRBank1),
-      this.fromTypedArray(this.BGCHRBank2),
+      this.gbcOBJRawPalette,
+      this.gbcBGRawPalette,
+      this.gbOBJPalette,
+      this.gbBGPalette,
+      this.gbcOBJPalette,
+      this.gbcBGPalette,
+      this.gbBGColorizedPalette,
+      this.gbOBJColorizedPalette,
+      this.cachedBGPaletteConversion,
+      this.cachedOBJPaletteConversion,
+      this.BGCHRBank1,
+      this.BGCHRBank2,
       this.haltPostClocks,
       this.interruptsRequested,
       this.interruptsEnabled,
@@ -10742,7 +10742,7 @@ GameBoyCore.prototype.recompileBootIOWriteHandling = function () {
 //Helper Functions
 GameBoyCore.prototype.toTypedArray = function (baseArray, memtype) {
   try {
-    if (settings[5]) {
+    if (settings[5] || `BYTES_PER_ELEMENT` in baseArray) {
       return baseArray;
     }
     if (!baseArray || !baseArray.length) {
@@ -10778,7 +10778,8 @@ GameBoyCore.prototype.fromTypedArray = function (baseArray) {
       return [];
     }
     var arrayTemp = [];
-    for (var index = 0; index < baseArray.length; ++index) {
+    const { length } = baseArray;
+    for (var index = 0; index < length; ++index) {
       arrayTemp[index] = baseArray[index];
     }
     return arrayTemp;
@@ -10915,10 +10916,6 @@ export function clearLastEmulation() {
 export const persistValues = {};
 
 function setValue(key, value) {
-  if(typeof value !== `string`) {
-    value = JSON.stringify(value);
-  }
-
   persistValues[key] = value;
 
   saveValue.push(key, value);
@@ -10931,17 +10928,7 @@ function deleteValue(key) {
 }
 
 function findValue(key) {
-  const value = persistValues[key];
-
-  if(!value) {
-    return value;
-  }
-
-  if(value[0] === `[` || value[0] === `{`) {
-    return JSON.parse(value);
-  }
-
-  return value;
+  return persistValues[key];
 }
 
 export const saveValue = {
@@ -10990,12 +10977,7 @@ function saveSRAM(cacheSRAM) {
         var sram = cacheSRAM || gameboy.saveSRAMState();
         if (sram.length > 0) {
           cout("Saving the SRAM...", 0);
-          if (findValue("SRAM_" + gameboy.name) != null) {
-            //Remove the outdated storage format save:
-            cout("Deleting the old SRAM save due to outdated format.", 0);
-            deleteValue("SRAM_" + gameboy.name);
-          }
-          setValue("B64_SRAM_" + gameboy.name, arrayToBase64(sram));
+          setValue("SRAM_" + gameboy.name, sram);
         }
         else {
           cout("SRAM could not be saved because it was empty.", 1);
@@ -11045,15 +11027,10 @@ export function autoSave() {
 }
 function openSRAM(filename) {
   try {
-    if (findValue("B64_SRAM_" + filename) != null) {
-      cout("Found a previous SRAM state (Will attempt to load).", 0);
-      return base64ToArray(findValue("B64_SRAM_" + filename));
-    }
-    else if (findValue("SRAM_" + filename) != null) {
+    if (findValue("SRAM_" + filename) != null) {
       cout("Found a previous SRAM state (Will attempt to load).", 0);
       return findValue("SRAM_" + filename);
-    }
-    else {
+    } else {
       cout("Could not find any previous SRAM copy for the current ROM.", 0);
     }
   }
