@@ -1375,7 +1375,7 @@ function GameBoyCore(canvas, ROMImage) {
   this.noiseSampleTable = null;
   this.initializeAudioStartState();
   this.soundMasterEnabled = false;			//As its name implies
-  this.channel3PCM = null;					//Channel 3 adjusted sample buffer.
+  this.channel3PCM = [];					//Channel 3 adjusted sample buffer.
   //Vin Shit:
   this.VinLeftChannelMasterVolume = 8;		//Computed post-mixing volume.
   this.VinRightChannelMasterVolume = 8;		//Computed post-mixing volume.
@@ -1483,8 +1483,8 @@ function GameBoyCore(canvas, ROMImage) {
   this.pixelEnd = 0;						//track the x-coord limit for line rendering (mid-scanline usage).
   this.currentX = 0;						//The x-coord we left off at for mid-scanline rendering.
   //BG Tile Pointer Caches:
-  this.BGCHRBank1 = null;
-  this.BGCHRBank2 = null;
+  this.BGCHRBank1 = [];
+  this.BGCHRBank2 = [];
   this.BGCHRCurrentBank = null;
   //Tile Data Cache:
   this.tileCache = null;
@@ -1492,16 +1492,16 @@ function GameBoyCore(canvas, ROMImage) {
   this.colors = [0xEFFFDE, 0xADD794, 0x529273, 0x183442];			//"Classic" GameBoy palette colors.
   this.OBJPalette = null;
   this.BGPalette = null;
-  this.gbcOBJRawPalette = null;
-  this.gbcBGRawPalette = null;
-  this.gbOBJPalette = null;
-  this.gbBGPalette = null;
-  this.gbcOBJPalette = null;
-  this.gbcBGPalette = null;
-  this.gbBGColorizedPalette = null;
-  this.gbOBJColorizedPalette = null;
-  this.cachedBGPaletteConversion = null;
-  this.cachedOBJPaletteConversion = null;
+  this.gbcOBJRawPalette = [];
+  this.gbcBGRawPalette = [];
+  this.gbOBJPalette = [];
+  this.gbBGPalette = [];
+  this.gbcOBJPalette = [];
+  this.gbcBGPalette = [];
+  this.gbBGColorizedPalette = [];
+  this.gbOBJColorizedPalette = [];
+  this.cachedBGPaletteConversion = [];
+  this.cachedOBJPaletteConversion = [];
   this.updateGBBGPalette = this.updateGBRegularBGPalette;
   this.updateGBOBJPalette = this.updateGBRegularOBJPalette;
   this.colorizedGBPalettes = false;
@@ -5176,7 +5176,7 @@ GameBoyCore.prototype.saveSRAMState = function () {
   }
   else {
     //Return the MBC RAM for backup...
-    return this.fromTypedArray(this.MBCRam);
+    return this.MBCRam;
   }
 }
 GameBoyCore.prototype.saveRTCState = function () {
@@ -5204,192 +5204,10 @@ GameBoyCore.prototype.saveRTCState = function () {
   }
 }
 GameBoyCore.prototype.saveState = function () {
-  const sram = this.MBCRam;
+    const sram = this.MBCRam.slice(0);
 
-  const rtc = [
-    this.lastIteration,
-    this.RTCisLatched,
-    this.latchedSeconds,
-    this.latchedMinutes,
-    this.latchedHours,
-    this.latchedLDays,
-    this.latchedHDays,
-    this.RTCSeconds,
-    this.RTCMinutes,
-    this.RTCHours,
-    this.RTCDays,
-    this.RTCDayOverFlow,
-    this.RTCHALT
-  ];
-
-  return {
-    state: [
-      this.inBootstrap,
-      this.registerA,
-      this.FZero,
-      this.FSubtract,
-      this.FHalfCarry,
-      this.FCarry,
-      this.registerB,
-      this.registerC,
-      this.registerD,
-      this.registerE,
-      this.registersHL,
-      this.stackPointer,
-      this.programCounter,
-      this.halt,
-      this.IME,
-      this.hdmaRunning,
-      this.CPUTicks,
-      this.doubleSpeedShifter,
-      this.memory,
-      sram,
-      this.VRAM,
-      this.currVRAMBank,
-      this.GBCMemory,
-      this.MBC1Mode,
-      this.MBCRAMBanksEnabled,
-      this.currMBCRAMBank,
-      this.currMBCRAMBankPosition,
-      this.cGBC,
-      this.gbcRamBank,
-      this.gbcRamBankPosition,
-      this.ROMBank1offs,
-      this.currentROMBank,
-      this.cartridgeType,
-      this.name,
-      this.gameCode,
-      this.modeSTAT,
-      this.LYCMatchTriggerSTAT,
-      this.mode2TriggerSTAT,
-      this.mode1TriggerSTAT,
-      this.mode0TriggerSTAT,
-      this.LCDisOn,
-      this.gfxWindowCHRBankPosition,
-      this.gfxWindowDisplay,
-      this.gfxSpriteShow,
-      this.gfxSpriteNormalHeight,
-      this.gfxBackgroundCHRBankPosition,
-      this.gfxBackgroundBankOffset,
-      this.TIMAEnabled,
-      this.DIVTicks,
-      this.LCDTicks,
-      this.timerTicks,
-      this.TACClocker,
-      this.serialTimer,
-      this.serialShiftTimer,
-      this.serialShiftTimerAllocated,
-      this.IRQEnableDelay,
+    const rtc = [
       this.lastIteration,
-      this.cMBC1,
-      this.cMBC2,
-      this.cMBC3,
-      this.cMBC5,
-      this.cMBC7,
-      this.cSRAM,
-      this.cBATT,
-      this.cMMMO1,
-      this.cRUMBLE,
-      this.cCamera,
-      this.cTAMA5,
-      this.cHuC3,
-      this.cHuC1,
-      this.drewBlank,
-      this.frameBuffer,
-      this.bgEnabled,
-      this.BGPriorityEnabled,
-      this.channel1FrequencyTracker,
-      this.channel1FrequencyCounter,
-      this.channel1totalLength,
-      this.channel1envelopeVolume,
-      this.channel1envelopeType,
-      this.channel1envelopeSweeps,
-      this.channel1envelopeSweepsLast,
-      this.channel1consecutive,
-      this.channel1frequency,
-      this.channel1SweepFault,
-      this.channel1ShadowFrequency,
-      this.channel1timeSweep,
-      this.channel1lastTimeSweep,
-      this.channel1Swept,
-      this.channel1frequencySweepDivider,
-      this.channel1decreaseSweep,
-      this.channel2FrequencyTracker,
-      this.channel2FrequencyCounter,
-      this.channel2totalLength,
-      this.channel2envelopeVolume,
-      this.channel2envelopeType,
-      this.channel2envelopeSweeps,
-      this.channel2envelopeSweepsLast,
-      this.channel2consecutive,
-      this.channel2frequency,
-      this.channel3canPlay,
-      this.channel3totalLength,
-      this.channel3patternType,
-      this.channel3frequency,
-      this.channel3consecutive,
-      this.channel3PCM,
-      this.channel4FrequencyPeriod,
-      this.channel4lastSampleLookup,
-      this.channel4totalLength,
-      this.channel4envelopeVolume,
-      this.channel4currentVolume,
-      this.channel4envelopeType,
-      this.channel4envelopeSweeps,
-      this.channel4envelopeSweepsLast,
-      this.channel4consecutive,
-      this.channel4BitRange,
-      this.soundMasterEnabled,
-      this.VinLeftChannelMasterVolume,
-      this.VinRightChannelMasterVolume,
-      this.leftChannel1,
-      this.leftChannel2,
-      this.leftChannel3,
-      this.leftChannel4,
-      this.rightChannel1,
-      this.rightChannel2,
-      this.rightChannel3,
-      this.rightChannel4,
-      this.channel1currentSampleLeft,
-      this.channel1currentSampleRight,
-      this.channel2currentSampleLeft,
-      this.channel2currentSampleRight,
-      this.channel3currentSampleLeft,
-      this.channel3currentSampleRight,
-      this.channel4currentSampleLeft,
-      this.channel4currentSampleRight,
-      this.channel1currentSampleLeftSecondary,
-      this.channel1currentSampleRightSecondary,
-      this.channel2currentSampleLeftSecondary,
-      this.channel2currentSampleRightSecondary,
-      this.channel3currentSampleLeftSecondary,
-      this.channel3currentSampleRightSecondary,
-      this.channel4currentSampleLeftSecondary,
-      this.channel4currentSampleRightSecondary,
-      this.channel1currentSampleLeftTrimary,
-      this.channel1currentSampleRightTrimary,
-      this.channel2currentSampleLeftTrimary,
-      this.channel2currentSampleRightTrimary,
-      this.mixerOutputCache,
-      this.channel1DutyTracker,
-      this.channel1CachedDuty,
-      this.channel2DutyTracker,
-      this.channel2CachedDuty,
-      this.channel1Enabled,
-      this.channel2Enabled,
-      this.channel3Enabled,
-      this.channel4Enabled,
-      this.sequencerClocks,
-      this.sequencePosition,
-      this.channel3Counter,
-      this.channel4Counter,
-      this.cachedChannel3Sample,
-      this.cachedChannel4Sample,
-      this.channel3FrequencyPeriod,
-      this.channel3lastSampleLookup,
-      this.actualScanLine,
-      this.lastUnrenderedLine,
-      this.queuedScanLines,
       this.RTCisLatched,
       this.latchedSeconds,
       this.latchedMinutes,
@@ -5401,42 +5219,224 @@ GameBoyCore.prototype.saveState = function () {
       this.RTCHours,
       this.RTCDays,
       this.RTCDayOverFlow,
-      this.RTCHALT,
-      this.usedBootROM,
-      this.skipPCIncrement,
-      this.STATTracker,
-      this.gbcRamBankPositionECHO,
-      this.numRAMBanks,
-      this.windowY,
-      this.windowX,
-      this.gbcOBJRawPalette,
-      this.gbcBGRawPalette,
-      this.gbOBJPalette,
-      this.gbBGPalette,
-      this.gbcOBJPalette,
-      this.gbcBGPalette,
-      this.gbBGColorizedPalette,
-      this.gbOBJColorizedPalette,
-      this.cachedBGPaletteConversion,
-      this.cachedOBJPaletteConversion,
-      this.BGCHRBank1,
-      this.BGCHRBank2,
-      this.haltPostClocks,
-      this.interruptsRequested,
-      this.interruptsEnabled,
-      this.remainingClocks,
-      this.colorizedGBPalettes,
-      this.backgroundY,
-      this.backgroundX,
-      this.CPUStopped,
-      this.audioClocksUntilNextEvent,
-      this.audioClocksUntilNextEventCounter
-    ],
+      this.RTCHALT
+    ];
 
-    sram,
+    return {
+      state: [
+        this.inBootstrap,
+        this.registerA,
+        this.FZero,
+        this.FSubtract,
+        this.FHalfCarry,
+        this.FCarry,
+        this.registerB,
+        this.registerC,
+        this.registerD,
+        this.registerE,
+        this.registersHL,
+        this.stackPointer,
+        this.programCounter,
+        this.halt,
+        this.IME,
+        this.hdmaRunning,
+        this.CPUTicks,
+        this.doubleSpeedShifter,
+        this.memory.slice(0),
+        sram,
+        this.VRAM.slice(0),
+        this.currVRAMBank,
+        this.GBCMemory.slice(0),
+        this.MBC1Mode,
+        this.MBCRAMBanksEnabled,
+        this.currMBCRAMBank,
+        this.currMBCRAMBankPosition,
+        this.cGBC,
+        this.gbcRamBank,
+        this.gbcRamBankPosition,
+        this.ROMBank1offs,
+        this.currentROMBank,
+        this.cartridgeType,
+        this.name,
+        this.gameCode,
+        this.modeSTAT,
+        this.LYCMatchTriggerSTAT,
+        this.mode2TriggerSTAT,
+        this.mode1TriggerSTAT,
+        this.mode0TriggerSTAT,
+        this.LCDisOn,
+        this.gfxWindowCHRBankPosition,
+        this.gfxWindowDisplay,
+        this.gfxSpriteShow,
+        this.gfxSpriteNormalHeight,
+        this.gfxBackgroundCHRBankPosition,
+        this.gfxBackgroundBankOffset,
+        this.TIMAEnabled,
+        this.DIVTicks,
+        this.LCDTicks,
+        this.timerTicks,
+        this.TACClocker,
+        this.serialTimer,
+        this.serialShiftTimer,
+        this.serialShiftTimerAllocated,
+        this.IRQEnableDelay,
+        this.lastIteration,
+        this.cMBC1,
+        this.cMBC2,
+        this.cMBC3,
+        this.cMBC5,
+        this.cMBC7,
+        this.cSRAM,
+        this.cBATT,
+        this.cMMMO1,
+        this.cRUMBLE,
+        this.cCamera,
+        this.cTAMA5,
+        this.cHuC3,
+        this.cHuC1,
+        this.drewBlank,
+        this.frameBuffer.slice(0),
+        this.bgEnabled,
+        this.BGPriorityEnabled,
+        this.channel1FrequencyTracker,
+        this.channel1FrequencyCounter,
+        this.channel1totalLength,
+        this.channel1envelopeVolume,
+        this.channel1envelopeType,
+        this.channel1envelopeSweeps,
+        this.channel1envelopeSweepsLast,
+        this.channel1consecutive,
+        this.channel1frequency,
+        this.channel1SweepFault,
+        this.channel1ShadowFrequency,
+        this.channel1timeSweep,
+        this.channel1lastTimeSweep,
+        this.channel1Swept,
+        this.channel1frequencySweepDivider,
+        this.channel1decreaseSweep,
+        this.channel2FrequencyTracker,
+        this.channel2FrequencyCounter,
+        this.channel2totalLength,
+        this.channel2envelopeVolume,
+        this.channel2envelopeType,
+        this.channel2envelopeSweeps,
+        this.channel2envelopeSweepsLast,
+        this.channel2consecutive,
+        this.channel2frequency,
+        this.channel3canPlay,
+        this.channel3totalLength,
+        this.channel3patternType,
+        this.channel3frequency,
+        this.channel3consecutive,
+        this.channel3PCM.slice(0),
+        this.channel4FrequencyPeriod,
+        this.channel4lastSampleLookup,
+        this.channel4totalLength,
+        this.channel4envelopeVolume,
+        this.channel4currentVolume,
+        this.channel4envelopeType,
+        this.channel4envelopeSweeps,
+        this.channel4envelopeSweepsLast,
+        this.channel4consecutive,
+        this.channel4BitRange,
+        this.soundMasterEnabled,
+        this.VinLeftChannelMasterVolume,
+        this.VinRightChannelMasterVolume,
+        this.leftChannel1,
+        this.leftChannel2,
+        this.leftChannel3,
+        this.leftChannel4,
+        this.rightChannel1,
+        this.rightChannel2,
+        this.rightChannel3,
+        this.rightChannel4,
+        this.channel1currentSampleLeft,
+        this.channel1currentSampleRight,
+        this.channel2currentSampleLeft,
+        this.channel2currentSampleRight,
+        this.channel3currentSampleLeft,
+        this.channel3currentSampleRight,
+        this.channel4currentSampleLeft,
+        this.channel4currentSampleRight,
+        this.channel1currentSampleLeftSecondary,
+        this.channel1currentSampleRightSecondary,
+        this.channel2currentSampleLeftSecondary,
+        this.channel2currentSampleRightSecondary,
+        this.channel3currentSampleLeftSecondary,
+        this.channel3currentSampleRightSecondary,
+        this.channel4currentSampleLeftSecondary,
+        this.channel4currentSampleRightSecondary,
+        this.channel1currentSampleLeftTrimary,
+        this.channel1currentSampleRightTrimary,
+        this.channel2currentSampleLeftTrimary,
+        this.channel2currentSampleRightTrimary,
+        this.mixerOutputCache,
+        this.channel1DutyTracker,
+        this.channel1CachedDuty,
+        this.channel2DutyTracker,
+        this.channel2CachedDuty,
+        this.channel1Enabled,
+        this.channel2Enabled,
+        this.channel3Enabled,
+        this.channel4Enabled,
+        this.sequencerClocks,
+        this.sequencePosition,
+        this.channel3Counter,
+        this.channel4Counter,
+        this.cachedChannel3Sample,
+        this.cachedChannel4Sample,
+        this.channel3FrequencyPeriod,
+        this.channel3lastSampleLookup,
+        this.actualScanLine,
+        this.lastUnrenderedLine,
+        this.queuedScanLines,
+        this.RTCisLatched,
+        this.latchedSeconds,
+        this.latchedMinutes,
+        this.latchedHours,
+        this.latchedLDays,
+        this.latchedHDays,
+        this.RTCSeconds,
+        this.RTCMinutes,
+        this.RTCHours,
+        this.RTCDays,
+        this.RTCDayOverFlow,
+        this.RTCHALT,
+        this.usedBootROM,
+        this.skipPCIncrement,
+        this.STATTracker,
+        this.gbcRamBankPositionECHO,
+        this.numRAMBanks,
+        this.windowY,
+        this.windowX,
+        this.gbcOBJRawPalette.slice(0),
+        this.gbcBGRawPalette.slice(0),
+        this.gbOBJPalette.slice(0),
+        this.gbBGPalette.slice(0),
+        this.gbcOBJPalette.slice(0),
+        this.gbcBGPalette.slice(0),
+        this.gbBGColorizedPalette.slice(0),
+        this.gbOBJColorizedPalette.slice(0),
+        this.cachedBGPaletteConversion.slice(0),
+        this.cachedOBJPaletteConversion.slice(0),
+        this.BGCHRBank1.slice(0),
+        this.BGCHRBank2.slice(0),
+        this.haltPostClocks,
+        this.interruptsRequested,
+        this.interruptsEnabled,
+        this.remainingClocks,
+        this.colorizedGBPalettes,
+        this.backgroundY,
+        this.backgroundX,
+        this.CPUStopped,
+        this.audioClocksUntilNextEvent,
+        this.audioClocksUntilNextEventCounter
+      ],
 
-    rtc
-  };
+      sram,
+
+      rtc
+    };
 }
 GameBoyCore.prototype.returnFromState = function (returnedFrom) {
   var index = 0;
@@ -5460,11 +5460,11 @@ GameBoyCore.prototype.returnFromState = function (returnedFrom) {
   this.hdmaRunning = state[index++];
   this.CPUTicks = state[index++];
   this.doubleSpeedShifter = state[index++];
-  this.memory = this.toTypedArray(state[index++], "uint8");
-  this.MBCRam = this.toTypedArray(state[index++], "uint8");
-  this.VRAM = this.toTypedArray(state[index++], "uint8");
+  this.memory = state[index++];
+  this.MBCRam = state[index++];
+  this.VRAM = state[index++];
   this.currVRAMBank = state[index++];
-  this.GBCMemory = this.toTypedArray(state[index++], "uint8");
+  this.GBCMemory = state[index++];
   this.MBC1Mode = state[index++];
   this.MBCRAMBanksEnabled = state[index++];
   this.currMBCRAMBank = state[index++];
@@ -5513,7 +5513,7 @@ GameBoyCore.prototype.returnFromState = function (returnedFrom) {
   this.cHuC3 = state[index++];
   this.cHuC1 = state[index++];
   this.drewBlank = state[index++];
-  this.frameBuffer = this.toTypedArray(state[index++], "int32");
+  this.frameBuffer = state[index++];
   this.bgEnabled = state[index++];
   this.BGPriorityEnabled = state[index++];
   this.channel1FrequencyTracker = state[index++];
@@ -5546,7 +5546,7 @@ GameBoyCore.prototype.returnFromState = function (returnedFrom) {
   this.channel3patternType = state[index++];
   this.channel3frequency = state[index++];
   this.channel3consecutive = state[index++];
-  this.channel3PCM = this.toTypedArray(state[index++], "int8");
+  this.channel3PCM = state[index++];
   this.channel4FrequencyPeriod = state[index++];
   this.channel4lastSampleLookup = state[index++];
   this.channel4totalLength = state[index++];
@@ -5627,18 +5627,18 @@ GameBoyCore.prototype.returnFromState = function (returnedFrom) {
   this.numRAMBanks = state[index++];
   this.windowY = state[index++];
   this.windowX = state[index++];
-  this.gbcOBJRawPalette = this.toTypedArray(state[index++], "uint8");
-  this.gbcBGRawPalette = this.toTypedArray(state[index++], "uint8");
-  this.gbOBJPalette = this.toTypedArray(state[index++], "int32");
-  this.gbBGPalette = this.toTypedArray(state[index++], "int32");
-  this.gbcOBJPalette = this.toTypedArray(state[index++], "int32");
-  this.gbcBGPalette = this.toTypedArray(state[index++], "int32");
-  this.gbBGColorizedPalette = this.toTypedArray(state[index++], "int32");
-  this.gbOBJColorizedPalette = this.toTypedArray(state[index++], "int32");
-  this.cachedBGPaletteConversion = this.toTypedArray(state[index++], "int32");
-  this.cachedOBJPaletteConversion = this.toTypedArray(state[index++], "int32");
-  this.BGCHRBank1 = this.toTypedArray(state[index++], "uint8");
-  this.BGCHRBank2 = this.toTypedArray(state[index++], "uint8");
+  this.gbcOBJRawPalette = state[index++];
+  this.gbcBGRawPalette = state[index++];
+  this.gbOBJPalette = state[index++];
+  this.gbBGPalette = state[index++];
+  this.gbcOBJPalette = state[index++];
+  this.gbcBGPalette = state[index++];
+  this.gbBGColorizedPalette = state[index++];
+  this.gbOBJColorizedPalette = state[index++];
+  this.cachedBGPaletteConversion = state[index++];
+  this.cachedOBJPaletteConversion = state[index++];
+  this.BGCHRBank1 = state[index++];
+  this.BGCHRBank2 = state[index++];
   this.haltPostClocks = state[index++];
   this.interruptsRequested = state[index++];
   this.interruptsEnabled = state[index++];
@@ -5651,8 +5651,8 @@ GameBoyCore.prototype.returnFromState = function (returnedFrom) {
   this.audioClocksUntilNextEvent = state[index++];
   this.audioClocksUntilNextEventCounter = state[index];
   this.fromSaveState = true;
-  this.TICKTable = this.toTypedArray(this.TICKTable, "uint8");
-  this.SecondaryTICKTable = this.toTypedArray(this.SecondaryTICKTable, "uint8");
+  this.TICKTable = this.TICKTable;
+  this.SecondaryTICKTable = this.SecondaryTICKTable;
   this.initializeReferencesFromSaveState();
   this.memoryReadJumpCompile();
   this.memoryWriteJumpCompile();
@@ -6235,7 +6235,7 @@ GameBoyCore.prototype.setupRAM = function () {
     var MBCRam = (typeof this.openMBC == "function") ? this.openMBC(this.name) : [];
     if (MBCRam.length > 0) {
       //Flash the SRAM into memory:
-      this.MBCRam = this.toTypedArray(MBCRam, "uint8");
+      this.MBCRam = MBCRam;
     }
     else {
       this.MBCRam = this.getTypedArray(this.numRAMBanks * 0x2000, 0, "uint8");
@@ -7662,7 +7662,7 @@ GameBoyCore.prototype.initializeModeSpecificArrays = function () {
 }
 GameBoyCore.prototype.GBCtoGBModeAdjust = function () {
   cout("Stepping down from GBC mode.", 0);
-  this.VRAM = this.GBCMemory = this.BGCHRCurrentBank = this.BGCHRBank2 = null;
+  this.VRAM = this.GBCMemory = this.BGCHRCurrentBank = this.BGCHRBank2 = [];
   this.tileCache.length = 0x700;
   if (settings[4]) {
     this.gbBGColorizedPalette = this.getTypedArray(4, 0, "int32");
@@ -10742,7 +10742,7 @@ GameBoyCore.prototype.recompileBootIOWriteHandling = function () {
 //Helper Functions
 GameBoyCore.prototype.toTypedArray = function (baseArray, memtype) {
   try {
-    if (settings[5] || `BYTES_PER_ELEMENT` in baseArray) {
+    if (settings[5]) {
       return baseArray;
     }
     if (!baseArray || !baseArray.length) {
