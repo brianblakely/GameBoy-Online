@@ -10976,7 +10976,7 @@ function saveSRAM(cacheSRAM) {
       try {
         var sram = cacheSRAM || gameboy.saveSRAMState();
         if (sram.length > 0) {
-          cout("Saving the SRAM...", 0);
+          // cout("Saving the SRAM...", 0);
           setValue("SRAM_" + gameboy.name, sram);
         }
         else {
@@ -11000,7 +11000,7 @@ function saveRTC(cacheRTC) {	//Execute this when SRAM is being saved as well.
   if (GameBoyEmulatorInitialized()) {
     if (gameboy.cTIMER) {
       try {
-        cout("Saving the RTC...", 0);
+        // cout("Saving the RTC...", 0);
         const rtc = cacheRTC || gameboy.saveRTCState();
         setValue("RTC_" + gameboy.name, rtc);
       }
