@@ -10958,7 +10958,7 @@ export function saveState(slot) {
       const deviceState = gameboy.saveState();
 
       setValue("FREEZE_" + gameboy.name + "_" + state_suffix, deviceState.state);
-      cout("Saved the current state as: FREEZE_" + gameboy.name + "_" + state_suffix, 0);
+      // cout("Saved the current state as: FREEZE_" + gameboy.name + "_" + state_suffix, 0);
 
       return deviceState;
     }
@@ -10988,7 +10988,7 @@ function saveSRAM(cacheSRAM) {
       }
     }
     else {
-      cout("Cannot save a game that does not have battery backed SRAM specified.", 1);
+      // cout("Cannot save a game that does not have battery backed SRAM specified.", 1);
     }
     saveRTC();
   }
@@ -11015,7 +11015,7 @@ function saveRTC(cacheRTC) {	//Execute this when SRAM is being saved as well.
 }
 export function autoSave() {
   if (GameBoyEmulatorInitialized()) {
-    cout("Automatically saving the SRAM, State, and RTC.", 0);
+    // cout("Automatically saving the SRAM, State, and RTC.", 0);
 
     const state = saveState(`auto`);
 
