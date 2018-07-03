@@ -5438,7 +5438,7 @@ GameBoyCore.prototype.saveState = function () {
       rtc
     };
 }
-GameBoyCore.prototype.returnFromState = function (returnedFrom) {
+GameBoyCore.prototype.returnFromState = function (returnedFrom, rewinding) {
   var index = 0;
   var state = returnedFrom.slice(0);
   this.ROMBankEdge = Math.floor(this.ROM.length / 0x4000);
@@ -5654,10 +5654,12 @@ GameBoyCore.prototype.returnFromState = function (returnedFrom) {
   this.TICKTable = this.TICKTable;
   this.SecondaryTICKTable = this.SecondaryTICKTable;
   this.initializeReferencesFromSaveState();
-  this.memoryReadJumpCompile();
-  this.memoryWriteJumpCompile();
-  this.initLCD();
-  this.initSound();
+  if(!rewinding) {
+    this.memoryReadJumpCompile();
+    this.memoryWriteJumpCompile();
+    this.initLCD();
+    this.initSound();
+  }
   this.noiseSampleTable = (this.channel4BitRange == 0x7FFF) ? this.LSFR15Table : this.LSFR7Table;
   this.channel4VolumeShifter = (this.channel4BitRange == 0x7FFF) ? 15 : 7;
 }
