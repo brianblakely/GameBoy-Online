@@ -1325,13 +1325,17 @@ function GameBoyCore(canvas, ROMImage, stringROM) {
   this.currentROMBank = 0;					//The parsed current ROM bank selection.
   this.cartridgeType = 0;						//Cartridge Type
   this.name = ``;								//Name of the game
-  for(const [i] of Array(0x13F - 0x134).fill(0).entries()) {
-    const index = i + 0x134;
-    if(stringROM.charCodeAt(index) > 0) {
+  for (var index = 0x134; index < 0x13F; index++) {
+    if (stringROM.charCodeAt(index) > 0) {
       this.name += stringROM[index];
     }
   }
   this.gameCode = "";							//Game code (Suffix for older games)
+  for (var index = 0x13F; index < 0x143; index++) {
+    if (stringROM.charCodeAt(index) > 0) {
+      this.gameCode += stringROM[index];
+    }
+  }
   this.fromSaveState = false;					//A boolean to see if this was loaded in as a save state.
   this.savedStateFileName = "";				//When loaded in as a save state, this will not be empty.
   this.STATTracker = 0;						//Tracker for STAT triggering.
@@ -5953,12 +5957,6 @@ GameBoyCore.prototype.getROMImage = function () {
   return this.ROMImage;
 }
 GameBoyCore.prototype.interpretCartridge = function () {
-  // ROM game code (for newer games)
-  for (var index = 0x13F; index < 0x143; index++) {
-    if (this.ROMImage[index] > 0) {
-      this.gameCode += this.ROMImage[index];
-    }
-  }
   cout("Game Title: " + this.name + "[" + this.gameCode + "][" + this.ROMImage[0x143] + "]", 0);
   cout("Game Code: " + this.gameCode, 0);
   // Cartridge type
@@ -11056,7 +11054,7 @@ function openRTC(filename) {
   }
   return [];
 }
-export function openState(slot, canvas) {
+export function openState(slot, canvas, stringROM) {
   const filename = "FREEZE_" + gameboy.name + "_" + slot;
 
   try {
@@ -11065,14 +11063,14 @@ export function openState(slot, canvas) {
         clearLastEmulation();
         cout("Attempting to run a saved emulation state.", 0);
         const { ROM } = gameboy;
-        gameboy = new GameBoyCore(canvas, "");
+        gameboy = new GameBoyCore(canvas, "", stringROM);
         gameboy.ROM = ROM;
         gameboy.savedStateFileName = filename;
         gameboy.returnFromState(findValue(filename));
         run();
       }
       catch (error) {
-        alert(error.message + " file: " + error.fileName + " line: " + error.lineNumber);
+        console.error(error);
       }
     }
     else {
