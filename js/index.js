@@ -1262,7 +1262,7 @@ function cout(message, level) {
 
   console[consoleMethod](message);
 }
-function GameBoyCore(canvas, ROMImage, name) {
+function GameBoyCore(canvas, ROMImage, stringROM) {
   //Params, etc...
   this.canvas = canvas;						//Canvas DOM object for drawing out the graphics to.
   this.drawContext = null;					// LCD Context
@@ -1324,7 +1324,13 @@ function GameBoyCore(canvas, ROMImage, name) {
   this.ROMBank1offs = 0;						//Offset of the ROM bank switching.
   this.currentROMBank = 0;					//The parsed current ROM bank selection.
   this.cartridgeType = 0;						//Cartridge Type
-  this.name = name;								//Name of the game
+  this.name = ``;								//Name of the game
+  for(const i of Array(0x13F - 0x134).fill(0)) {
+    const index = i + 0x134;
+    if(stringROM[index] > 0) {
+      name += stringROM[index];
+    }
+  }
   this.gameCode = "";							//Game code (Suffix for older games)
   this.fromSaveState = false;					//A boolean to see if this was loaded in as a save state.
   this.savedStateFileName = "";				//When loaded in as a save state, this will not be empty.
@@ -10841,10 +10847,10 @@ export var settings = [						//Some settings.
   true,								//Use image smoothing based scaling?
     [true, true, true, true]            //User controlled channel enables.
 ];
-export function start(canvas, ROM) {
+export function start(canvas, ROM, stringROM) {
   clearLastEmulation();
   autoSave();	//If we are about to load a new game, then save the last one...
-  gameboy = new GameBoyCore(canvas, ROM);
+  gameboy = new GameBoyCore(canvas, ROM, stringROM);
   gameboy.openMBC = openSRAM;
   gameboy.openRTC = openRTC;
   gameboy.start();
