@@ -1325,10 +1325,11 @@ function GameBoyCore(canvas, ROMImage, stringROM) {
   this.currentROMBank = 0;					//The parsed current ROM bank selection.
   this.cartridgeType = 0;						//Cartridge Type
   this.name = ``;								//Name of the game
-  for(const i of Array(0x13F - 0x134).fill(0)) {
+  for(const [i] of Array(0x13F - 0x134).fill(0).entries()) {
     const index = i + 0x134;
-    if(stringROM[index] > 0) {
-      name += stringROM[index];
+    console.log(`i, stringROM.charCodeAt(index)`, i, stringROM.charCodeAt(index));
+    if(stringROM.charCodeAt(index) > 0) {
+      this.name += stringROM.charCodeAt(index);
     }
   }
   this.gameCode = "";							//Game code (Suffix for older games)
