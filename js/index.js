@@ -1262,7 +1262,7 @@ function cout(message, level) {
 
   console[consoleMethod](message);
 }
-function GameBoyCore(canvas, ROMImage) {
+function GameBoyCore(canvas, ROMImage, name) {
   //Params, etc...
   this.canvas = canvas;						//Canvas DOM object for drawing out the graphics to.
   this.drawContext = null;					// LCD Context
@@ -1324,7 +1324,7 @@ function GameBoyCore(canvas, ROMImage) {
   this.ROMBank1offs = 0;						//Offset of the ROM bank switching.
   this.currentROMBank = 0;					//The parsed current ROM bank selection.
   this.cartridgeType = 0;						//Cartridge Type
-  this.name = "";								//Name of the game
+  this.name = name;								//Name of the game
   this.gameCode = "";							//Game code (Suffix for older games)
   this.fromSaveState = false;					//A boolean to see if this was loaded in as a save state.
   this.savedStateFileName = "";				//When loaded in as a save state, this will not be empty.
@@ -5897,14 +5897,14 @@ GameBoyCore.prototype.ROMLoad = function () {
       //Patch in the GBC boot ROM into the memory map:
       for (; romIndex < 0x100; ++romIndex) {
         this.memory[romIndex] = this.GBCBOOTROM[romIndex];											//Load in the GameBoy Color BOOT ROM.
-        this.ROM[romIndex] = (this.ROMImage.charCodeAt(romIndex) & 0xFF);							//Decode the ROM binary for the switch out.
+        this.ROM[romIndex] = this.ROMImage[romIndex];							//Decode the ROM binary for the switch out.
       }
       for (; romIndex < 0x200; ++romIndex) {
-        this.memory[romIndex] = this.ROM[romIndex] = (this.ROMImage.charCodeAt(romIndex) & 0xFF);	//Load in the game ROM.
+        this.memory[romIndex] = this.ROM[romIndex] = this.ROMImage[romIndex];	//Load in the game ROM.
       }
       for (; romIndex < 0x900; ++romIndex) {
         this.memory[romIndex] = this.GBCBOOTROM[romIndex - 0x100];									//Load in the GameBoy Color BOOT ROM.
-        this.ROM[romIndex] = (this.ROMImage.charCodeAt(romIndex) & 0xFF);							//Decode the ROM binary for the switch out.
+        this.ROM[romIndex] = this.ROMImage[romIndex];							//Decode the ROM binary for the switch out.
       }
       this.usedGBCBootROM = true;
     }
@@ -5912,22 +5912,22 @@ GameBoyCore.prototype.ROMLoad = function () {
       //Patch in the GBC boot ROM into the memory map:
       for (; romIndex < 0x100; ++romIndex) {
         this.memory[romIndex] = this.GBBOOTROM[romIndex];											//Load in the GameBoy Color BOOT ROM.
-        this.ROM[romIndex] = (this.ROMImage.charCodeAt(romIndex) & 0xFF);							//Decode the ROM binary for the switch out.
+        this.ROM[romIndex] = this.ROMImage[romIndex];							//Decode the ROM binary for the switch out.
       }
     }
     for (; romIndex < 0x4000; ++romIndex) {
-      this.memory[romIndex] = this.ROM[romIndex] = (this.ROMImage.charCodeAt(romIndex) & 0xFF);	//Load in the game ROM.
+      this.memory[romIndex] = this.ROM[romIndex] = this.ROMImage[romIndex];	//Load in the game ROM.
     }
   }
   else {
     //Don't load in the boot ROM:
     for (; romIndex < 0x4000; ++romIndex) {
-      this.memory[romIndex] = this.ROM[romIndex] = (this.ROMImage.charCodeAt(romIndex) & 0xFF);	//Load in the game ROM.
+      this.memory[romIndex] = this.ROM[romIndex] = this.ROMImage[romIndex];	//Load in the game ROM.
     }
   }
   //Finish the decoding of the ROM binary:
   for (; romIndex < maxLength; ++romIndex) {
-    this.ROM[romIndex] = (this.ROMImage.charCodeAt(romIndex) & 0xFF);
+    this.ROM[romIndex] = this.ROMImage[romIndex];
   }
   this.ROMBankEdge = Math.floor(this.ROM.length / 0x4000);
   //Set up the emulator for the cartidge specifics:
@@ -5942,20 +5942,14 @@ GameBoyCore.prototype.getROMImage = function () {
   }
   var length = this.ROM.length;
   for (var index = 0; index < length; index++) {
-    this.ROMImage += String.fromCharCode(this.ROM[index]);
+    this.ROMImage = this.ROM[index];
   }
   return this.ROMImage;
 }
 GameBoyCore.prototype.interpretCartridge = function () {
-  // ROM name
-  for (var index = 0x134; index < 0x13F; index++) {
-    if (this.ROMImage.charCodeAt(index) > 0) {
-      this.name += this.ROMImage[index];
-    }
-  }
   // ROM game code (for newer games)
   for (var index = 0x13F; index < 0x143; index++) {
-    if (this.ROMImage.charCodeAt(index) > 0) {
+    if (this.ROMImage[index] > 0) {
       this.gameCode += this.ROMImage[index];
     }
   }
@@ -6175,7 +6169,7 @@ GameBoyCore.prototype.interpretCartridge = function () {
     //New Style License Header
     cout("New style license code: " + cNewLicense, 0);
   }
-  this.ROMImage = "";	//Memory consumption reduction.
+  this.ROMImage = [];	//Memory consumption reduction.
 }
 GameBoyCore.prototype.disableBootROM = function () {
   //Remove any traces of the boot ROM from ROM memory.
