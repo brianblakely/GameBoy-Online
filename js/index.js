@@ -1327,9 +1327,8 @@ function GameBoyCore(canvas, ROMImage, stringROM) {
   this.name = ``;								//Name of the game
   for(const [i] of Array(0x13F - 0x134).fill(0).entries()) {
     const index = i + 0x134;
-    console.log(`i, stringROM.charCodeAt(index)`, i, stringROM.charCodeAt(index));
     if(stringROM.charCodeAt(index) > 0) {
-      this.name += stringROM.charCodeAt(index);
+      this.name += stringROM[index];
     }
   }
   this.gameCode = "";							//Game code (Suffix for older games)
