@@ -7475,29 +7475,40 @@ GameBoyCore.prototype.executeHDMA = function () {
     --this.memory[0xFF55];
   }
 }
-GameBoyCore.prototype.clockUpdate = function () {
-  if (this.cTIMER) {
-    var dateObj = new Date();
-    var newTime = dateObj.getTime();
-    var timeElapsed = newTime - this.lastIteration;	//Get the numnber of milliseconds since this last executed.
-    this.lastIteration = newTime;
-    if (this.cTIMER && !this.RTCHALT) {
-      //Update the MBC3 RTC:
-      this.RTCSeconds += timeElapsed / 1000;
-      while (this.RTCSeconds >= 60) {	//System can stutter, so the seconds difference can get large, thus the "while".
-        this.RTCSeconds -= 60;
-        ++this.RTCMinutes;
-        if (this.RTCMinutes >= 60) {
-          this.RTCMinutes -= 60;
-          ++this.RTCHours;
-          if (this.RTCHours >= 24) {
-            this.RTCHours -= 24
-            ++this.RTCDays;
-            if (this.RTCDays >= 512) {
-              this.RTCDays -= 512;
-              this.RTCDayOverFlow = true;
-            }
-          }
+GameBoyCore.prototype.clockUpdate = function (manualTime) {
+  if(!this.cTIMER) {
+    return false;
+  }
+
+  if(manualTime) {
+    const {seconds, minutes, hours, days} = manualTime;
+
+    this.RTCSeconds = seconds;
+    this.RTCMinutes = minutes;
+    this.RTCHours = hours;
+    this.RTCDays = days;
+
+    return manualTime;
+  }
+
+  var dateObj = new Date();
+  var newTime = dateObj.getTime();
+  var timeElapsed = newTime - this.lastIteration;	//Get the numnber of milliseconds since this last executed.
+  this.lastIteration = newTime;
+  //Update the MBC3 RTC:
+  this.RTCSeconds += timeElapsed / 1000;
+  while (this.RTCSeconds >= 60) {	//System can stutter, so the seconds difference can get large, thus the "while".
+    this.RTCSeconds -= 60;
+    ++this.RTCMinutes;
+    if (this.RTCMinutes >= 60) {
+      this.RTCMinutes -= 60;
+      ++this.RTCHours;
+      if (this.RTCHours >= 24) {
+        this.RTCHours -= 24
+        ++this.RTCDays;
+        if (this.RTCDays >= 512) {
+          this.RTCDays -= 512;
+          this.RTCDayOverFlow = true;
         }
       }
     }
