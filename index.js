@@ -210,7 +210,7 @@ Resampler.prototype.initializeBuffers = function () {
 
 //2010-2013 Grant Galitz - XAudioJS realtime audio output compatibility library:
 var XAudioJSscriptsHandle = document.getElementsByTagName("script");
-var XAudioJSsourceHandle = XAudioJSscriptsHandle[XAudioJSscriptsHandle.length-1].src;
+var XAudioJSsourceHandle = XAudioJSscriptsHandle[XAudioJSscriptsHandle.length-1]?.src ?? document.createElement("script");
 function XAudioServer(channels, sampleRate, minBufferSize, maxBufferSize, underRunCallback, volume, failureCallback) {
   XAudioJSChannelsAllocated = Math.max(channels, 1);
   this.XAudioJSSampleRate = Math.abs(sampleRate);
@@ -670,7 +670,7 @@ function XAudioJSGetArraySlice(buffer, lengthOf) {
 
 //JavaScript Image Resizer (c) 2012 - Grant Galitz
 var scripts = document.getElementsByTagName("script");
-var sourceOfWorker = scripts[scripts.length-1].src;
+var sourceOfWorker = scripts[scripts.length-1]?.src ?? document.createElement("script");
 function Resize(widthOriginal, heightOriginal, targetWidth, targetHeight, blendAlpha, interpolationPass, useWebWorker, resizeCallback) {
   this.widthOriginal = Math.abs(parseInt(widthOriginal) || 0);
   this.heightOriginal = Math.abs(parseInt(heightOriginal) || 0);
