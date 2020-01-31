@@ -2,21 +2,31 @@
 /* eslint-enable no-undef */
 
 //JavaScript Audio Resampler (c) 2011 - Grant Galitz
-function Resampler(
-  fromSampleRate,
-  toSampleRate,
-  channels,
-  outputBufferSize,
-  noReturn
-) {
-  this.fromSampleRate = fromSampleRate;
-  this.toSampleRate = toSampleRate;
-  this.channels = channels | 0;
-  this.outputBufferSize = outputBufferSize;
-  this.noReturn = !!noReturn;
-  this.initialize();
-}
-Resampler.prototype.initialize = function() {
+class Resampler {
+  fromSampleRate: number;
+  toSampleRate: number;
+  channels: number;
+  outputBufferSize: number;
+  noReturn: boolean;
+  resampler: Function;
+  ratioWeight: number;
+  lastWeight: number;
+  tailExists: boolean;
+
+  constructor(fromSampleRate: number,
+  toSampleRate: number,
+  channels: number,
+  outputBufferSize: number,
+  noReturn: boolean) {
+    this.fromSampleRate = fromSampleRate;
+    this.toSampleRate = toSampleRate;
+    this.channels = channels | 0;
+    this.outputBufferSize = outputBufferSize;
+    this.noReturn = !!noReturn;
+    this.initialize();
+  }
+
+  initialize() {
   //Perform some checks:
   if (this.fromSampleRate > 0 && this.toSampleRate > 0 && this.channels > 0) {
     if (this.fromSampleRate == this.toSampleRate) {
@@ -48,8 +58,9 @@ Resampler.prototype.initialize = function() {
   } else {
     throw new Error("Invalid settings specified for the resampler.");
   }
-};
-Resampler.prototype.compileLinearInterpolationFunction = function() {
+}
+
+compileLinearInterpolationFunction() {
   var toCompile =
     "var bufferLength = buffer.length;\
   var outLength = this.outputBufferSize;\
@@ -117,8 +128,9 @@ Resampler.prototype.compileLinearInterpolationFunction = function() {
     throw(new Error("Buffer was of incorrect sample length."));\
   }';
   this.resampler = Function("buffer", toCompile);
-};
-Resampler.prototype.compileMultiTapFunction = function() {
+}
+
+compileMultiTapFunction() {
   var toCompile =
     "var bufferLength = buffer.length;\
   var outLength = this.outputBufferSize;\
@@ -211,8 +223,9 @@ Resampler.prototype.compileMultiTapFunction = function() {
     throw(new Error("Buffer was of incorrect sample length."));\
   }';
   this.resampler = Function("buffer", toCompile);
-};
-Resampler.prototype.bypassResampler = function(buffer) {
+}
+
+bypassResampler(buffer) {
   if (this.noReturn) {
     //Set the buffer passed as our own, as we don't need to resample it:
     this.outputBuffer = buffer;
@@ -221,8 +234,9 @@ Resampler.prototype.bypassResampler = function(buffer) {
     //Just return the buffer passsed:
     return buffer;
   }
-};
-Resampler.prototype.bufferSlice = function(sliceAmount) {
+}
+
+bufferSlice(sliceAmount) {
   if (this.noReturn) {
     //If we're going to access the properties directly from this object:
     return sliceAmount;
@@ -241,8 +255,9 @@ Resampler.prototype.bufferSlice = function(sliceAmount) {
       }
     }
   }
-};
-Resampler.prototype.initializeBuffers = function() {
+}
+
+initializeBuffers() {
   //Initialize the internal buffer:
   try {
     this.outputBuffer = new Float32Array(this.outputBufferSize);
@@ -251,7 +266,8 @@ Resampler.prototype.initializeBuffers = function() {
     this.outputBuffer = [];
     this.lastOutput = [];
   }
-};
+}
+}
 
 //2010-2013 Grant Galitz - XAudioJS realtime audio output compatibility library:
 var XAudioJSscriptsHandle = document.getElementsByTagName("script");
