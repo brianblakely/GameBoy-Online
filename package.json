@@ -1,0 +1,26 @@
+{
+  "name": "gameboy-online",
+  "version": "1.0.0",
+  "description": "Game Boy emulation core for the Atlantis frontend.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "asbuild:untouched": "asc assembly/index.ts -b build/untouched.wasm -t build/untouched.wat --validate --sourceMap --debug",
+    "asbuild:optimized": "asc assembly/index.ts -b build/optimized.wasm -t build/optimized.wat --validate --sourceMap --optimize",
+    "asbuild": "npm run asbuild:untouched && npm run asbuild:optimized"
+  },
+  "keywords": [
+    "emulator",
+    "emulation",
+    "games",
+    "gaming"
+  ],
+  "author": "Grant Galitz (original)",
+  "license": "ISC",
+  "devDependencies": {
+    "assemblyscript": "^0.9.1"
+  },
+  "dependencies": {
+    "@assemblyscript/loader": "^0.9.1"
+  }
+}
