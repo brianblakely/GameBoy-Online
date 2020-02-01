@@ -694,13 +694,6 @@ var scripts = document.getElementsByTagName("script");
 var sourceOfWorker =
   scripts[scripts.length - 1]?.src ?? document.createElement("script");
 
-type ResizeWorkerMessage = [string, number,
-        number,
-        number,
-        number,
-        3 | 4,
-        boolean];
-
 class Resize {
   widthOriginal: number;
   heightOriginal: number;
@@ -709,18 +702,21 @@ class Resize {
   colorChannels: 3 | 4;
   interpolationPass: boolean;
   useWebWorker: boolean;
-  resizeCallback: (buffer: ResizeWorkerMessage) => void;
+  resizeCallback: (buffer: Uint8Array) => void;
   targetWidthMultipliedByChannels: number;
   originalWidthMultipliedByChannels: number;
   originalHeightMultipliedByChannels: number;
   widthPassResultSize: number;
   finalResultSize: number;
   worker: Worker;
-  heightBuffer: ResizeWorkerMessage;
-  resizeWidth: (buffer: Float32Array) => Float32Array;
+  heightBuffer: Uint8Array;
+  resizeWidth: (buffer: Uint8Array) => Uint8Array;
   ratioWeightWidthPass: number;
-  resizeHeight: (buffer: Float32Array) => Float32Array | ResizeWorkerMessage;
+  resizeHeight: (buffer: Uint8Array) => Uint8Array;
   ratioWeightHeightPass: number;
+  outputWidthWorkBench: Float32Array;
+  widthBuffer: Uint8Array;
+  outputHeightWorkBench: Float32Array;
 
   constructor(
     widthOriginal: number,
@@ -730,7 +726,7 @@ class Resize {
     blendAlpha: boolean,
     interpolationPass: boolean,
     useWebWorker: boolean,
-    resizeCallback: (buffer: ResizeWorkerMessage) => void
+    resizeCallback: (buffer: Uint8Array) => void
   ) {
     this.widthOriginal = Math.abs(widthOriginal || 0);
     this.heightOriginal = Math.abs(heightOriginal || 0);
@@ -842,7 +838,7 @@ class Resize {
     }
   }
 
-  resizeWidthRGB(buffer: Float32Array) {
+  resizeWidthRGB(buffer: Uint8Array) {
     var ratioWeight = this.ratioWeightWidthPass;
     var ratioWeightDivisor = 1 / ratioWeight;
     var weight = 0;
@@ -910,7 +906,7 @@ class Resize {
     return outputBuffer;
   }
 
-  resizeWidthInterpolatedRGB(buffer: Float32Array) {
+  resizeWidthInterpolatedRGB(buffer: Uint8Array) {
     var ratioWeight = this.ratioWeightWidthPass;
     var weight = 0;
     var finalOffset = 0;
@@ -985,7 +981,7 @@ class Resize {
     return outputBuffer;
   }
 
-  resizeWidthRGBA(buffer: Float32Array) {
+  resizeWidthRGBA(buffer: Uint8Array) {
     var ratioWeight = this.ratioWeightWidthPass;
     var ratioWeightDivisor = 1 / ratioWeight;
     var weight = 0;
@@ -1056,7 +1052,7 @@ class Resize {
     return outputBuffer;
   }
 
-  resizeWidthInterpolatedRGBA(buffer: Float32Array) {
+  resizeWidthInterpolatedRGBA(buffer: Uint8Array) {
     var ratioWeight = this.ratioWeightWidthPass;
     var weight = 0;
     var finalOffset = 0;
@@ -1136,7 +1132,7 @@ class Resize {
     return outputBuffer;
   }
 
-  resizeHeightRGB(buffer: Float32Array) {
+  resizeHeightRGB(buffer: Uint8Array) {
     var ratioWeight = this.ratioWeightHeightPass;
     var ratioWeightDivisor = 1 / ratioWeight;
     var weight = 0;
@@ -1205,7 +1201,7 @@ class Resize {
     return outputBuffer;
   }
 
-  resizeHeightInterpolated(buffer: Float32Array) {
+  resizeHeightInterpolated(buffer: Uint8Array) {
     var ratioWeight = this.ratioWeightHeightPass;
     var weight = 0;
     var finalOffset = 0;
@@ -1269,7 +1265,7 @@ class Resize {
     return outputBuffer;
   }
 
-  resizeHeightRGBA(buffer: Float32Array) {
+  resizeHeightRGBA(buffer: Uint8Array) {
     var ratioWeight = this.ratioWeightHeightPass;
     var ratioWeightDivisor = 1 / ratioWeight;
     var weight = 0;
@@ -1344,7 +1340,7 @@ class Resize {
     return outputBuffer;
   }
 
-  resize(buffer: Float32Array) {
+  resize(buffer: Uint8Array) {
     if (this.useWebWorker) {
       this.worker.postMessage(["resize", buffer]);
     } else {
@@ -1352,46 +1348,28 @@ class Resize {
     }
   }
 
-  bypassResizer(buffer: Float32Array) {
+  bypassResizer(buffer: Uint8Array) {
     //Just return the buffer passsed:
     return buffer;
   }
 
-  initializeFirstPassBuffers(BILINEARAlgo) {
+  initializeFirstPassBuffers(BILINEARAlgo: boolean) {
     //Initialize the internal width pass buffers:
-    this.widthBuffer = this.generateFloatBuffer(this.widthPassResultSize);
+    this.widthBuffer = new Uint8Array(this.widthPassResultSize);
     if (!BILINEARAlgo) {
-      this.outputWidthWorkBench = this.generateFloatBuffer(
+      this.outputWidthWorkBench = new Float32Array(
         this.originalHeightMultipliedByChannels
       );
     }
   }
 
-  initializeSecondPassBuffers(BILINEARAlgo) {
+  initializeSecondPassBuffers(BILINEARAlgo: boolean) {
     //Initialize the internal height pass buffers:
-    this.heightBuffer = this.generateUint8Buffer(this.finalResultSize);
+    this.heightBuffer = new Uint8Array(this.finalResultSize);
     if (!BILINEARAlgo) {
-      this.outputHeightWorkBench = this.generateFloatBuffer(
+      this.outputHeightWorkBench = new Float32Array(
         this.targetWidthMultipliedByChannels
       );
-    }
-  }
-
-  generateFloatBuffer(bufferLength) {
-    //Generate a float32 typed array buffer:
-    try {
-      return new Float32Array(bufferLength);
-    } catch (error) {
-      return [];
-    }
-  }
-
-  generateUint8Buffer(bufferLength) {
-    //Generate a uint8 typed array buffer:
-    try {
-      return new Uint8Array(bufferLength);
-    } catch (error) {
-      return [];
     }
   }
 }
