@@ -1468,8 +1468,8 @@ class GameBoyCore {
   memoryHighWriter: {
     (parentObj: GameBoyCore, registerStart: number, registerEnd: number): void;
   }[] = []; //Array of functions mapped to write to 0xFFXX memory
-  ROM = []; //The full ROM file dumped to an array.
-  memory: number[] = []; //Main Core Memory
+  ROM: Uint8Array = new Uint8Array(0); //The full ROM file dumped to an array.
+  memory: Uint8Array = new Uint8Array(0); //Main Core Memory
   MBCRam = []; //Switchable RAM (Used by games for more RAM) for the main memory range 0xA000 - 0xC000.
   VRAM = []; //Extra VRAM bank for GBC.
   GBCMemory = []; //GBC main RAM Banks
@@ -1497,13 +1497,17 @@ class GameBoyCore {
   mode1TriggerSTAT = false; //Should we trigger an interrupt if in mode 1?
   mode0TriggerSTAT = false; //Should we trigger an interrupt if in mode 0?
   LCDisOn = false; //Is the emulated LCD controller on?
-  LINECONTROL = []; //Array of functions to handle each scan line we do (onscreen + offscreen)
+  LINECONTROL: {
+    (parentObj: GameBoyCore): void;
+  }[] = []; //Array of functions to handle each scan line we do (onscreen + offscreen)
   DISPLAYOFFCONTROL = [
     function(parentObj: GameBoyCore) {
       //Array of line 0 function to handle the LCD controller when it's off (Do nothing!).
     }
   ];
-  LCDCONTROL = null; //Pointer to either LINECONTROL or DISPLAYOFFCONTROL.
+  LCDCONTROL: {
+    (parentObj: GameBoyCore): void;
+  }[] = []; //Pointer to either LINECONTROL or DISPLAYOFFCONTROL.
   //RTC (Real Time Clock for MBC3):
   RTCisLatched = false;
   latchedSeconds = 0; //RTC latched seconds.
@@ -1533,11 +1537,11 @@ class GameBoyCore {
     [false, true, true, true, true, true, true, false]
   ];
   bufferContainAmount = 0; //Buffer maintenance metric.
-  LSFR15Table = null;
-  LSFR7Table = null;
-  noiseSampleTable = null;
+  LSFR15Table: Int8Array;
+  LSFR7Table: Int8Array;
+  noiseSampleTable: Int8Array;
   soundMasterEnabled = false; //As its name implies
-  channel3PCM = []; //Channel 3 adjusted sample buffer.
+  channel3PCM: Int8Array = new Int8Array(0); //Channel 3 adjusted sample buffer.
   //Vin Shit:
   VinLeftChannelMasterVolume = 8; //Computed post-mixing volume.
   VinRightChannelMasterVolume = 8; //Computed post-mixing volume.
@@ -1616,6 +1620,7 @@ class GameBoyCore {
   cHuC3 = false; //Does the cartridge use HuC3 (Hudson Soft / modified MBC3)?
   cHuC1 = false; //Does the cartridge use HuC1 (Hudson Soft / modified MBC1)?
   cTIMER = false; //Does the cartridge have an RTC?
+  numROMBanks: number;
   ROMBanks = [
     // 1 Bank = 16 KBytes = 256 Kbits
     2,
@@ -1649,7 +1654,7 @@ class GameBoyCore {
   pixelEnd = 0; //track the x-coord limit for line rendering (mid-scanline usage).
   currentX = 0; //The x-coord we left off at for mid-scanline rendering.
   //BG Tile Pointer Caches:
-  BGCHRBank1 = [];
+  BGCHRBank1: Uint8Array = new Uint8Array(0);
   BGCHRBank2 = [];
   BGCHRCurrentBank = null;
   //Tile Data Cache:
@@ -1674,7 +1679,7 @@ class GameBoyCore {
   BGLayerRender = null; //Reference to the BG rendering function.
   WindowLayerRender = null; //Reference to the window rendering function.
   SpriteLayerRender = null; //Reference to the OAM rendering function.
-  frameBuffer = []; //The internal frame-buffer.
+  frameBuffer: Int32Array = new Int32Array(0); //The internal frame-buffer.
   swizzledFrame = null; //The secondary gfx buffer that holds the converted RGBA values.
   canvasBuffer = null; //imageData handle
   pixelStart = 0; //Temp variable for holding the current working framebuffer offset.
@@ -1685,6 +1690,68 @@ class GameBoyCore {
   offscreenHeight: number;
   offscreenRGBCount: number;
   resizePathClear = true;
+  channel1FrequencyTracker = 0x2000;
+  channel1DutyTracker = 0;
+  channel1CachedDuty: boolean[];
+  channel1totalLength = 0;
+  channel1envelopeVolume = 0;
+  channel1envelopeType = false;
+  channel1envelopeSweeps = 0;
+  channel1envelopeSweepsLast = 0;
+  channel1consecutive = true;
+  channel1frequency = 0;
+  channel1SweepFault = false;
+  channel1ShadowFrequency = 0;
+  channel1timeSweep = 1;
+  channel1lastTimeSweep = 0;
+  channel1Swept = false;
+  channel1frequencySweepDivider = 0;
+  channel1decreaseSweep = false;
+  channel2FrequencyTracker = 0x2000;
+  channel2DutyTracker = 0;
+  channel2CachedDuty: boolean[];
+  channel2totalLength = 0;
+  channel2envelopeVolume = 0;
+  channel2envelopeType = false;
+  channel2envelopeSweeps = 0;
+  channel2envelopeSweepsLast = 0;
+  channel2consecutive = true;
+  channel2frequency = 0;
+  channel3canPlay = false;
+  channel3totalLength = 0;
+  channel3patternType = 4;
+  channel3frequency = 0;
+  channel3consecutive = true;
+  channel3Counter = 0x800;
+  channel4FrequencyPeriod = 8;
+  channel4totalLength = 0;
+  channel4envelopeVolume = 0;
+  channel4currentVolume = 0;
+  channel4envelopeType = false;
+  channel4envelopeSweeps = 0;
+  channel4envelopeSweepsLast = 0;
+  channel4consecutive = true;
+  channel4BitRange = 0x7fff;
+  channel4VolumeShifter = 15;
+  channel1FrequencyCounter = 0x2000;
+  channel2FrequencyCounter = 0x2000;
+  channel3FrequencyPeriod = 0x800;
+  channel3lastSampleLookup = 0;
+  channel4lastSampleLookup = 0;
+  sequencerClocks = 0x2000;
+  sequencePosition = 0;
+  channel4Counter = 8;
+  cachedChannel3Sample = 0;
+  cachedChannel4Sample = 0;
+  channel1Enabled = false;
+  channel2Enabled = false;
+  channel3Enabled = false;
+  channel4Enabled = false;
+  channel1canPlay = false;
+  channel2canPlay = false;
+  channel4canPlay = false;
+  ROMBankEdge: number;
+  openRTC: (name: string) => any[];
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -6520,7 +6587,7 @@ class GameBoyCore {
     }
   ];
 
-  TICKTable = [
+  TICKTable = Uint8Array.from([
     //Number of machine cycles for each instruction:
     /*   0,  1,  2,  3,  4,  5,  6,  7,      8,  9,  A, B,  C,  D, E,  F*/
     4,
@@ -6782,9 +6849,9 @@ class GameBoyCore {
     4,
     8,
     16 //F
-  ];
+  ]);
 
-  SecondaryTICKTable = [
+  SecondaryTICKTable = Uint8Array.from([
     //Number of machine cycles for each 0xCBXX instruction:
     /*  0, 1, 2, 3, 4, 5,  6, 7,        8, 9, A, B, C, D,  E, F*/
     8,
@@ -7046,7 +7113,7 @@ class GameBoyCore {
     8,
     16,
     8 //F
-  ];
+  ]);
 
   saveSRAMState() {
     if (!this.cBATT || this.MBCRam.length == 0) {
@@ -7306,7 +7373,7 @@ class GameBoyCore {
     return saveState;
   }
 
-  returnFromState(returnedFrom, rewinding) {
+  returnFromState(returnedFrom: any[], rewinding: boolean) {
     var index = 0;
     var state = returnedFrom.slice(0);
     this.ROMBankEdge = Math.floor(this.ROM.length / 0x4000);
@@ -7562,18 +7629,13 @@ class GameBoyCore {
 
   initMemory() {
     //Initialize the RAM:
-    this.memory = this.getTypedArray(0x10000, 0, "uint8");
-    this.frameBuffer = this.getTypedArray(23040, 0xf8f8f8, "int32");
-    this.BGCHRBank1 = this.getTypedArray(0x800, 0, "uint8");
-    this.TICKTable = this.toTypedArray(this.TICKTable, "uint8");
-    this.SecondaryTICKTable = this.toTypedArray(
-      this.SecondaryTICKTable,
-      "uint8"
-    );
-    this.channel3PCM = this.getTypedArray(0x20, 0, "int8");
+    this.memory = this.getTypedArray(0x10000, 0, this.memory);
+    this.frameBuffer = this.getTypedArray(23040, 0xf8f8f8, this.frameBuffer);
+    this.BGCHRBank1 = this.getTypedArray(0x800, 0, this.BGCHRBank1);
+    this.channel3PCM = this.getTypedArray(0x20, 0, this.channel3PCM);
   }
 
-  generateCacheArray(tileAmount) {
+  generateCacheArray(tileAmount: number) {
     var tileArray = [];
     var tileNumber = 0;
     while (tileNumber < tileAmount) {
@@ -7760,7 +7822,7 @@ class GameBoyCore {
 
   ROMLoad() {
     //Load the first two ROM banks (0x0000 - 0x7FFF) into regular gameboy memory:
-    this.ROM = [];
+    this.ROM = new Uint8Array(0);
     this.usedBootROM =
       settings[1] &&
       ((!settings[11] && this.GBCBOOTROM.length == 0x800) ||
@@ -7811,18 +7873,6 @@ class GameBoyCore {
     this.interpretCartridge();
     //Check for IRQ matching upon initialization:
     this.checkIRQMatching();
-  }
-
-  getROMImage() {
-    //Return the binary version of the ROM image currently running:
-    if (this.ROMImage.length > 0) {
-      return this.ROMImage.length;
-    }
-    var length = this.ROM.length;
-    for (var index = 0; index < length; index++) {
-      this.ROMImage = this.ROM[index];
-    }
-    return this.ROMImage;
   }
 
   interpretCartridge() {
@@ -8062,7 +8112,7 @@ class GameBoyCore {
       //New Style License Header
       cout("New style license code: " + cNewLicense, 0);
     }
-    this.ROMImage = []; //Memory consumption reduction.
+    this.ROMImage = new Uint8Array(0); //Memory consumption reduction.
   }
 
   disableBootROM() {
@@ -8494,7 +8544,6 @@ class GameBoyCore {
     this.channel4envelopeSweepsLast = 0;
     this.channel4consecutive = true;
     this.channel4BitRange = 0x7fff;
-    this.noiseSampleTable = this.LSFR15Table;
     this.channel4VolumeShifter = 15;
     this.channel1FrequencyCounter = 0x2000;
     this.channel2FrequencyCounter = 0x2000;
@@ -9065,7 +9114,7 @@ class GameBoyCore {
     this.channel4OutputLevelCache();
   }
 
-  run(force) {
+  run(force?: boolean) {
     //The preprocessing before the actual iteration loop:
     if (force || (this.stopEmulator & 2) == 0) {
       if (force || (this.stopEmulator & 1) == 1) {
@@ -14047,7 +14096,7 @@ class GameBoyCore {
     }
   }
 
-  fromTypedArray(baseArray) {
+  fromTypedArray(baseArray: any[]) {
     try {
       if (!baseArray || !baseArray.length) {
         return [];
@@ -14064,23 +14113,25 @@ class GameBoyCore {
     }
   }
 
-  getTypedArray(length, defaultValue, numberType) {
+  getTypedArray(length: number, defaultValue: number, origArray: any) {
+    var arrayHandle: any;
+
     try {
       if (settings[5]) {
         throw new Error("Settings forced typed arrays to be disabled.");
       }
-      switch (numberType) {
-        case "int8":
-          var arrayHandle = new Int8Array(length);
+      switch (origArray.constructor) {
+        case Int8Array:
+          arrayHandle = new Int8Array(length);
           break;
-        case "uint8":
-          var arrayHandle = new Uint8Array(length);
+        case Uint8Array:
+          arrayHandle = new Uint8Array(length);
           break;
-        case "int32":
-          var arrayHandle = new Int32Array(length);
+        case Int32Array:
+          arrayHandle = new Int32Array(length);
           break;
-        case "float32":
-          var arrayHandle = new Float32Array(length);
+        case Float32Array:
+          arrayHandle = new Float32Array(length);
       }
       if (defaultValue != 0) {
         var index = 0;
@@ -14090,7 +14141,7 @@ class GameBoyCore {
       }
     } catch (error) {
       cout("Could not convert an array to a typed array: " + error.message, 1);
-      var arrayHandle = [];
+      arrayHandle = [];
       var index = 0;
       while (index < length) {
         arrayHandle[index++] = defaultValue;
@@ -14099,224 +14150,7 @@ class GameBoyCore {
     return arrayHandle;
   }
 }
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-//Below are the audio generation functions timed against the CPU:
-;
-//Generate audio, but don't actually output it (Used for when sound is disabled by user/browser):
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-//Generate only a single tile line for the GB tile cache mode:
-;
-//Generate only a single tile line for the GBC tile cache mode (Bank 1):
-;
-//Generate all the flip combinations for a full GBC VRAM bank 1 tile:
-;
-//Generate only a single tile line for the GBC tile cache mode (Bank 2):
-;
-//Generate all the flip combinations for a full GBC VRAM bank 2 tile:
-;
-//Generate only a single tile line for the GB tile cache mode (OAM accessible range):
-;
-;
-;
-;
-;
-;
-//Check for the highest priority IRQ to fire:
-;
-/*
-  Check for IRQs to be fired while not in HALT:
-*/
-;
-/*
-  Handle the HALT opcode by predicting all IRQ cases correctly,
-  then selecting the next closest IRQ firing from the prediction to
-  clock up to. This prevents hacky looping that doesn't predict, but
-  instead just clocks through the core update procedure by one which
-  is very slow. Not many emulators do this because they have to cover
-  all the IRQ prediction cases and they usually get them wrong.
-*/
-;
-//Memory Reading:
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-//Memory Writing:
-;
-//0xFFXX fast path:
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-;
-//Helper Functions
-;
-;
-;
 
-"use strict";
 export var gameboy = null; //GameBoyCore object.
 export var gbRunInterval = null; //GameBoyCore Timer
 export var settings: [
