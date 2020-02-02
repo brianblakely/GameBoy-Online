@@ -14233,12 +14233,13 @@ export const saveValue: {
   }
 };
 
-export function saveState(slot: number | string) {
+export function saveState(slot: number | string | undefined) {
   if (GameBoyEmulatorInitialized()) {
     try {
-      var state_suffix = typeof slot === "number" ? slot : 0;
+      var state_suffix = typeof slot !== "undefined" ? slot : 0;
       while (
-        !slot &&
+        typeof slot === "undefined" &&
+        typeof state_suffix === "number" &&
         findValue("FREEZE_" + gameboy.name + "_" + state_suffix) != null
       ) {
         state_suffix++;
