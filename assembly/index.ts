@@ -232,7 +232,7 @@ class Resampler {
       //If we're going to access the properties directly from this object:
       return sliceAmount;
     } else {
-        return this.outputBuffer.subarray(0, sliceAmount);
+      return this.outputBuffer.subarray(0, sliceAmount);
     }
   }
 
@@ -392,17 +392,16 @@ Useful in preventing infinite recursion issues with calling writeAudio inside yo
 
   //DO NOT CALL THIS, the lib calls this internally!
   initializeAudio() {
-      try {
-        this.initializeWebAudio();
-      } catch (error) {
-
-          this.audioType = -1;
-          this.failureCallback();
-      }
+    try {
+      this.initializeWebAudio();
+    } catch (error) {
+      this.audioType = -1;
+      this.failureCallback();
+    }
   }
 
   disconnect() {
-    if(XAudioJSWebAudioAudioNode instanceof ScriptProcessorNode) {
+    if (XAudioJSWebAudioAudioNode instanceof ScriptProcessorNode) {
       XAudioJSWebAudioAudioNode.disconnect(0);
     }
   }
@@ -494,7 +493,6 @@ Useful in preventing infinite recursion issues with calling writeAudio inside yo
     );
   }
 }
-
 
 function XAudioJSGenerateFlashSurroundString() {
   //Convert the arrays to one long string for speed.
@@ -650,10 +648,14 @@ function XAudioJSWebAudioEvent(event: AudioProcessingEvent) {
 function XAudioJSResampleRefill() {
   if (XAudioJSAudioBufferSize > 0) {
     //Resample a chunk of audio:
-    var resampleLength = XAudioJSResampleControl !== null ? XAudioJSResampleControl.resampler(
-      XAudioJSGetBufferSamples()
-    ) : 0;
-    var resampledResult = XAudioJSResampleControl !== null ? XAudioJSResampleControl.outputBuffer : new Float32Array(0);
+    var resampleLength =
+      XAudioJSResampleControl !== null
+        ? XAudioJSResampleControl.resampler(XAudioJSGetBufferSamples())
+        : 0;
+    var resampledResult =
+      XAudioJSResampleControl !== null
+        ? XAudioJSResampleControl.outputBuffer
+        : new Float32Array(0);
     for (var index2 = 0; index2 < resampleLength; ) {
       XAudioJSResampledBuffer[XAudioJSResampleBufferEnd++] =
         resampledResult[index2++];
@@ -14088,40 +14090,44 @@ class GameBoyCore {
 export var gameboy: GameBoyCore; //GameBoyCore object.
 export var gbRunInterval: NodeJS.Timeout; //GameBoyCore Timer
 export var settings: [
-         boolean,
-         boolean,
-         boolean,
-         number,
-         boolean,
-         boolean,
-         number,
-         number,
-         number,
-         boolean,
-         boolean,
-         boolean,
-         boolean,
-         boolean,
-         [boolean, boolean, boolean, boolean]
-       ] = [
-         //Some settings.
-         true, //Turn on sound.
-         true, //Boot with boot ROM first?
-         false, //Give priority to GameBoy mode
-         1, //Volume level set.
-         true, //Colorize GB mode?
-         false, //Disallow typed arrays?
-         8, //Interval for the emulator loop.
-         10, //Audio buffer minimum span amount over x interpreter iterations.
-         20, //Audio buffer maximum span amount over x interpreter iterations.
-         false, //Override to allow for MBC1 instead of ROM only (compatibility for broken 3rd-party cartridges).
-         false, //Override MBC RAM disabling and always allow reading and writing to the banks.
-         false, //Use the GameBoy boot ROM instead of the GameBoy Color boot ROM.
-         false, //Scale the canvas in JS, or let the browser scale the canvas?
-         true, //Use image smoothing based scaling?
-         [true, true, true, true] //User controlled channel enables.
-       ];
-export function start(canvas: HTMLCanvasElement, ROM: Uint8Array, stringROM: string) {
+  boolean,
+  boolean,
+  boolean,
+  number,
+  boolean,
+  boolean,
+  number,
+  number,
+  number,
+  boolean,
+  boolean,
+  boolean,
+  boolean,
+  boolean,
+  [boolean, boolean, boolean, boolean]
+] = [
+  //Some settings.
+  true, //Turn on sound.
+  true, //Boot with boot ROM first?
+  false, //Give priority to GameBoy mode
+  1, //Volume level set.
+  true, //Colorize GB mode?
+  false, //Disallow typed arrays?
+  8, //Interval for the emulator loop.
+  10, //Audio buffer minimum span amount over x interpreter iterations.
+  20, //Audio buffer maximum span amount over x interpreter iterations.
+  false, //Override to allow for MBC1 instead of ROM only (compatibility for broken 3rd-party cartridges).
+  false, //Override MBC RAM disabling and always allow reading and writing to the banks.
+  false, //Use the GameBoy boot ROM instead of the GameBoy Color boot ROM.
+  false, //Scale the canvas in JS, or let the browser scale the canvas?
+  true, //Use image smoothing based scaling?
+  [true, true, true, true] //User controlled channel enables.
+];
+export function start(
+  canvas: HTMLCanvasElement,
+  ROM: Uint8Array,
+  stringROM: string
+) {
   clearLastEmulation();
   autoSave(); //If we are about to load a new game, then save the last one...
   gameboy = new GameBoyCore(canvas, ROM, stringROM);
@@ -14209,29 +14215,29 @@ function findValue(key: string) {
 }
 
 export const saveValue: {
-         callbacks: { (key: string, value: any): void }[];
-         push: (key: string, value: any) => void;
-         subscribe: (callback: (key: string, value: any) => void) => void
-       } = {
-         callbacks: [],
+  callbacks: { (key: string, value: any): void }[];
+  push: (key: string, value: any) => void;
+  subscribe: (callback: (key: string, value: any) => void) => void;
+} = {
+  callbacks: [],
 
-         push(key, value) {
-           if (this.callbacks.length) {
-             for (const callback of this.callbacks) {
-               callback(key, value);
-             }
-           }
-         },
+  push(key, value) {
+    if (this.callbacks.length) {
+      for (const callback of this.callbacks) {
+        callback(key, value);
+      }
+    }
+  },
 
-         subscribe(callback) {
-           this.callbacks.push(callback);
-         }
-       };
+  subscribe(callback) {
+    this.callbacks.push(callback);
+  }
+};
 
 export function saveState(slot: number | string) {
   if (GameBoyEmulatorInitialized()) {
     try {
-      var state_suffix = typeof slot === 'number' ? slot : 0;
+      var state_suffix = typeof slot === "number" ? slot : 0;
       while (
         !slot &&
         findValue("FREEZE_" + gameboy.name + "_" + state_suffix) != null
@@ -14356,7 +14362,11 @@ function openRTC(filename: string) {
   }
   return [];
 }
-export function openState(slot: number, canvas: HTMLCanvasElement, stringROM: string) {
+export function openState(
+  slot: number,
+  canvas: HTMLCanvasElement,
+  stringROM: string
+) {
   const filename = "FREEZE_" + gameboy.name + "_" + slot;
 
   try {
