@@ -693,8 +693,7 @@ function XAudioJSGetArraySlice(buffer: Float32Array, lengthOf: number) {
 
 //JavaScript Image Resizer (c) 2012 - Grant Galitz
 var scripts = document.getElementsByTagName("script");
-var sourceOfWorker =
-  scripts[scripts.length - 1]?.src ?? document.createElement("script");
+var sourceOfWorker: string = scripts[scripts.length - 1]?.src ?? "";
 
 class Resize {
   widthOriginal: number;
@@ -8248,7 +8247,7 @@ class GameBoyCore {
       const canvasStyle = this.canvas.getAttribute("style");
 
       if (
-        !canvasStyle === null ||
+        canvasStyle === null ||
         (canvasStyle !== null && !canvasStyle.includes(`image-rendering`))
       ) {
         this.canvas.setAttribute(
