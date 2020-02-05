@@ -440,14 +440,14 @@ Useful in preventing infinite recursion issues with calling writeAudio inside yo
      good reason. Keep a watchdog timer to restart the failed
      node if it glitches. Google Chrome never had this issue.
      */
-    XAudioJSWebAudioWatchDogLast = new Date().getTime();
+    XAudioJSWebAudioWatchDogLast = Date.now();
     if (navigator.userAgent.indexOf("Gecko/") > -1) {
       if (XAudioJSWebAudioWatchDogTimer) {
         clearInterval(XAudioJSWebAudioWatchDogTimer);
       }
       var parentObj = this;
       XAudioJSWebAudioWatchDogTimer = setInterval(function() {
-        var timeDiff = new Date().getTime() - XAudioJSWebAudioWatchDogLast;
+        var timeDiff = Date.now() - XAudioJSWebAudioWatchDogLast;
         if (timeDiff > 500) {
           parentObj.initializeWebAudio();
         }
@@ -601,7 +601,7 @@ function XAudioJSGenerateFlashMonoString() {
 function XAudioJSWebAudioEvent(event: AudioProcessingEvent) {
   //Web Audio API callback...
   if (XAudioJSWebAudioWatchDogTimer) {
-    XAudioJSWebAudioWatchDogLast = new Date().getTime();
+    XAudioJSWebAudioWatchDogLast = Date.now();
   }
   //Find all output channels:
   for (
@@ -1598,8 +1598,8 @@ class GameBoyCore {
   serialShiftTimer = 0; //Serial Transfer Shift Timer
   serialShiftTimerAllocated = 0; //Serial Transfer Shift Timer Refill
   IRQEnableDelay = 0; //Are the interrupts on queue to be enabled?
-  lastIteration = new Date().getTime(); //The last time we iterated the main loop.
-  firstIteration = new Date().getTime();
+  lastIteration = Date.now(); //The last time we iterated the main loop.
+  firstIteration = Date.now();
   iterations = 0;
   actualScanLine = 0; //Actual scan line...
   lastUnrenderedLine = 0; //Last rendered scan line...
@@ -1776,12 +1776,12 @@ class GameBoyCore {
 
     for (var index = 0x134; index < 0x13f; index++) {
       if (stringROM.charCodeAt(index) > 0) {
-        this.name += stringROM[index];
+        this.name += stringROM.substring(index, index + 1);
       }
     }
     for (var index = 0x13f; index < 0x143; index++) {
       if (stringROM.charCodeAt(index) > 0) {
-        this.gameCode += stringROM[index];
+        this.gameCode += stringROM.substring(index, index + 1);
       }
     }
 
@@ -6600,7 +6600,17 @@ class GameBoyCore {
     }
   ];
 
-  TICKTable = Uint8Array.from([
+  constructTickTable(array: number[]) {
+    const table = new Uint8Array(array.length);
+
+    for (let index = 0; index < array.length; index++) {
+      table[index] = array[index];
+    }
+
+    return table;
+  }
+
+  TICKTable = this.constructTickTable([
     //Number of machine cycles for each instruction:
     /*   0,  1,  2,  3,  4,  5,  6,  7,      8,  9,  A, B,  C,  D, E,  F*/
     4,
@@ -6864,7 +6874,7 @@ class GameBoyCore {
     16 //F
   ]);
 
-  SecondaryTICKTable = Uint8Array.from([
+  SecondaryTICKTable = this.constructTickTable([
     //Number of machine cycles for each 0xCBXX instruction:
     /*  0, 1, 2, 3, 4, 5,  6, 7,        8, 9, A, B, C, D,  E, F*/
     8,
@@ -8647,9 +8657,9 @@ class GameBoyCore {
   generateAudioFake(numSamples: number) {
     if (this.soundMasterEnabled && !this.CPUStopped) {
       for (var clockUpTo = 0; numSamples > 0; ) {
-        clockUpTo = Math.min(
+        clockUpTo = Math.min(Math.min(
           this.audioClocksUntilNextEventCounter,
-          this.sequencerClocks,
+          this.sequencerClocks),
           numSamples
         );
         this.audioClocksUntilNextEventCounter -= clockUpTo;
@@ -8919,10 +8929,10 @@ class GameBoyCore {
       this.channel4UpdateCache();
     }
     //Find the number of clocks to next closest counter event:
-    this.audioClocksUntilNextEventCounter = this.audioClocksUntilNextEvent = Math.min(
+    this.audioClocksUntilNextEventCounter = this.audioClocksUntilNextEvent = Math.min(Math.min(Math.min(
       this.channel1FrequencyCounter,
-      this.channel2FrequencyCounter,
-      this.channel3Counter,
+      this.channel2FrequencyCounter),
+      this.channel3Counter),
       this.channel4Counter
     );
   }
@@ -9664,8 +9674,7 @@ class GameBoyCore {
       return;
     }
 
-    var dateObj = new Date();
-    var newTime = dateObj.getTime();
+    var newTime = Date.now();
     var timeElapsed = newTime - this.lastIteration; //Get the numnber of milliseconds since this last executed.
     this.lastIteration = newTime;
     //Update the MBC3 RTC:
@@ -14158,8 +14167,7 @@ export function run() {
     if (!GameBoyEmulatorPlaying()) {
       gameboy.stopEmulator &= 1;
       cout("Starting the iterator.", 0);
-      var dateObj = new Date();
-      gameboy.firstIteration = dateObj.getTime();
+      gameboy.firstIteration = Date.now();
       gameboy.iterations = 0;
       gbRunInterval = setInterval(function() {
         if (!document.hidden) {
