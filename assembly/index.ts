@@ -1,7 +1,4 @@
-/* eslint-disable */
-/* eslint-enable no-undef */
-
-//Some Required Globals:
+// Audio.
 export var XAudioJSWebAudioContextHandle: AudioContext;
 var XAudioJSWebAudioAudioNode: ScriptProcessorNode | null = null;
 var XAudioJSWebAudioLaunchedContext = false;
@@ -242,10 +239,6 @@ class Resampler {
 }
 
 //2010-2013 Grant Galitz - XAudioJS realtime audio output compatibility library:
-var XAudioJSscriptsHandle = document.getElementsByTagName("script");
-var XAudioJSsourceHandle =
-  XAudioJSscriptsHandle[XAudioJSscriptsHandle.length - 1]?.src ??
-  document.createElement("script");
 class XAudioServer {
   XAudioJSSampleRate: number;
   underRunCallback: Function;
@@ -8627,9 +8620,8 @@ class GameBoyCore {
   generateAudioFake(numSamples: number) {
     if (this.soundMasterEnabled && !this.CPUStopped) {
       for (var clockUpTo = 0; numSamples > 0; ) {
-        clockUpTo = Math.min(Math.min(
-          this.audioClocksUntilNextEventCounter,
-          this.sequencerClocks),
+        clockUpTo = Math.min(
+          Math.min(this.audioClocksUntilNextEventCounter, this.sequencerClocks),
           numSamples
         );
         this.audioClocksUntilNextEventCounter -= clockUpTo;
@@ -8899,10 +8891,11 @@ class GameBoyCore {
       this.channel4UpdateCache();
     }
     //Find the number of clocks to next closest counter event:
-    this.audioClocksUntilNextEventCounter = this.audioClocksUntilNextEvent = Math.min(Math.min(Math.min(
-      this.channel1FrequencyCounter,
-      this.channel2FrequencyCounter),
-      this.channel3Counter),
+    this.audioClocksUntilNextEventCounter = this.audioClocksUntilNextEvent = Math.min(
+      Math.min(
+        Math.min(this.channel1FrequencyCounter, this.channel2FrequencyCounter),
+        this.channel3Counter
+      ),
       this.channel4Counter
     );
   }
