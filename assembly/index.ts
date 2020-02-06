@@ -4,8 +4,6 @@
 //Some Required Globals:
 export var XAudioJSWebAudioContextHandle: AudioContext;
 var XAudioJSWebAudioAudioNode: ScriptProcessorNode | null = null;
-var XAudioJSWebAudioWatchDogTimer: NodeJS.Timeout;
-var XAudioJSWebAudioWatchDogLast: number = 0;
 var XAudioJSWebAudioLaunchedContext = false;
 var XAudioJSAudioContextSampleBuffer: Float32Array = new Float32Array(0);
 var XAudioJSResampledBuffer: Float32Array = new Float32Array(0);
@@ -18,12 +16,7 @@ var XAudioJSAudioBufferSize = 0;
 var XAudioJSResampleBufferStart = 0;
 var XAudioJSResampleBufferEnd = 0;
 var XAudioJSResampleBufferSize = 0;
-var XAudioJSMediaStreamWorker: Worker | null = null;
-var XAudioJSMediaStreamBuffer: Float32Array = new Float32Array(0);
-var XAudioJSMediaStreamSampleRate = 44100;
-var XAudioJSMozAudioSampleRate = 44100;
 var XAudioJSSamplesPerCallback = 2048; //Has to be between 2048 and 4096 (If over, then samples are ignored, if under then silence is added).
-var XAudioJSMediaStreamLengthAliasCounter = 0;
 var XAudioJSBinaryString: string[] = [];
 
 //JavaScript Audio Resampler (c) 2011 - Grant Galitz
@@ -434,25 +427,6 @@ Useful in preventing infinite recursion issues with calling writeAudio inside yo
     ); //Send and chain the output of the audio manipulation to the system audio output.
     this.resetCallbackAPIAudioBuffer(XAudioJSWebAudioContextHandle.sampleRate);
     this.audioType = 1;
-    /*
-     Firefox has a bug in its web audio implementation...
-     The node may randomly stop playing on Mac OS X for no
-     good reason. Keep a watchdog timer to restart the failed
-     node if it glitches. Google Chrome never had this issue.
-     */
-    XAudioJSWebAudioWatchDogLast = Date.now();
-    if (navigator.userAgent.indexOf("Gecko/") > -1) {
-      if (XAudioJSWebAudioWatchDogTimer) {
-        clearInterval(XAudioJSWebAudioWatchDogTimer);
-      }
-      var parentObj = this;
-      XAudioJSWebAudioWatchDogTimer = setInterval(function() {
-        var timeDiff = Date.now() - XAudioJSWebAudioWatchDogLast;
-        if (timeDiff > 500) {
-          parentObj.initializeWebAudio();
-        }
-      }, 500);
-    }
   }
 
   changeVolume(newVolume: number) {
@@ -599,10 +573,6 @@ function XAudioJSGenerateFlashMonoString() {
 }
 
 function XAudioJSWebAudioEvent(event: AudioProcessingEvent) {
-  //Web Audio API callback...
-  if (XAudioJSWebAudioWatchDogTimer) {
-    XAudioJSWebAudioWatchDogLast = Date.now();
-  }
   //Find all output channels:
   for (
     var bufferCount = 0, buffers = [];
