@@ -46,13 +46,17 @@ function cout(message: string, level: number) {
   }
 }
 
+const CYCLES_PER_SECOND = 4194304;
+const CLOCK_CYCLES_PER_FRAME = 70224;
+const FRAMERATE = CYCLES_PER_SECOND / CLOCK_CYCLES_PER_FRAME;
+const FRAME_INTERVAL = 1000 / FRAMERATE;
+
 const GBWIDTH = 160;
 const GBHEIGHT = 144;
 
 class GameBoyCore {
   //Params, etc...
   canvas: HTMLCanvasElement; //Canvas DOM object for drawing out the graphics to.
-  drawContext: CanvasRenderingContext2D; // LCD Context
   ROMImage: Uint8Array; //The game's ROM.
   //CPU Registers and Flags:
   registerA = 0x01; //Register A (Accumulator)
@@ -133,7 +137,7 @@ class GameBoyCore {
   LCDisOn = false; //Is the emulated LCD controller on?
   LINECONTROL: {
     (parentObj: GameBoyCore): void;
-  }[] = []; //Array of functions to handle each scan line we do (onscreen + offscreen)
+  }[] = []; //Array of functions to handle each scan line we do
   DISPLAYOFFCONTROL = [
     function(parentObj: GameBoyCore) {
       //Array of line 0 function to handle the LCD controller when it's off (Do nothing!).
@@ -318,11 +322,9 @@ class GameBoyCore {
   canvasBuffer: ImageData; //imageData handle
   pixelStart = 0; //Temp variable for holding the current working framebuffer offset.
   //Variables used for scaling in JS:
-  readonly onscreenWidth: number = GBWIDTH;
-  readonly offscreenWidth: number = GBWIDTH;
-  readonly onscreenHeight: number = GBHEIGHT;
-  readonly offscreenHeight: number = GBHEIGHT;
-  readonly offscreenRGBCount: number = GBWIDTH * GBHEIGHT * 4;
+  readonly width: number = GBWIDTH;
+  readonly height: number = GBHEIGHT;
+  readonly RGBCount: number = GBWIDTH * GBHEIGHT * 4;
   channel1FrequencyTracker = 0x2000;
   channel1DutyTracker = 0;
   channel1CachedDuty: boolean[];
@@ -387,9 +389,7 @@ class GameBoyCore {
   openRTC: (name: string) => any[];
   clocksPerSecond: number;
   openMBC: (name: string) => Uint8Array;
-  canvasOffscreen: HTMLCanvasElement;
-  drawContextOffscreen: CanvasRenderingContext2D | null;
-  drawContextOnscreen: CanvasRenderingContext2D | null;
+  drawContext: CanvasRenderingContext2D | null;
   audioResamplerFirstPassFactor: number;
   downSampleInputDivider: number;
   audioBuffer: Float32Array;
@@ -427,10 +427,6 @@ class GameBoyCore {
 
     this.updateGBBGPalette = this.updateGBRegularBGPalette;
     this.updateGBOBJPalette = this.updateGBRegularOBJPalette;
-
-    this.onscreenWidth = this.offscreenWidth = 160;
-    this.onscreenHeight = this.offscreenHeight = 144;
-    this.offscreenRGBCount = this.onscreenWidth * this.onscreenHeight * 4;
 
     //Initialize the white noise cache tables ahead of time:
     this.intializeWhiteNoise();
@@ -6859,117 +6855,64 @@ class GameBoyCore {
     );
   }
 
-  recomputeDimension() {
-    initNewCanvas();
-  }
-
   initLCD() {
-    this.recomputeDimension();
+    this.drawContext = this.canvas.getContext("2d");
 
-    try {
-      this.canvasOffscreen = document.createElement("canvas");
-      this.canvasOffscreen.width = this.offscreenWidth;
-      this.canvasOffscreen.height = this.offscreenHeight;
-      this.drawContextOffscreen = this.canvasOffscreen.getContext("2d");
-      this.drawContextOnscreen = this.canvas.getContext("2d");
+    const canvasStyle = this.canvas.getAttribute("style");
 
-      const canvasStyle = this.canvas.getAttribute("style");
-
-      if (
-        canvasStyle === null ||
-        (canvasStyle !== null && !canvasStyle.includes(`image-rendering`))
-      ) {
-        this.canvas.setAttribute(
-          "style",
-          (this.canvas.getAttribute("style") || "") +
-            "; image-rendering: " +
-            (settings[13] ? "auto" : "-webkit-optimize-contrast") +
-            ";" +
-            "; image-rendering: " +
-            (settings[13] ? "auto" : "pixelated") +
-            ";" +
-            "image-rendering: " +
-            (settings[13] ? "optimizeQuality" : "-o-crisp-edges") +
-            ";" +
-            "image-rendering: " +
-            (settings[13] ? "optimizeQuality" : "-moz-crisp-edges") +
-            ";" +
-            "-ms-interpolation-mode: " +
-            (settings[13] ? "bicubic" : "nearest-neighbor") +
-            ";"
-        );
-      }
-
-      //Get a CanvasPixelArray buffer:
-      try {
-        if (this.drawContextOffscreen !== null) {
-          this.canvasBuffer = this.drawContextOffscreen.createImageData(
-            this.offscreenWidth,
-            this.offscreenHeight
-          );
-        }
-      } catch (error) {
-        cout(
-          'Falling back to the getImageData initialization (Error "' +
-            error.message +
-            '").',
-          1
-        );
-        if (this.drawContextOffscreen !== null) {
-          this.canvasBuffer = this.drawContextOffscreen.getImageData(
-            0,
-            0,
-            this.offscreenWidth,
-            this.offscreenHeight
-          );
-        }
-      }
-      var index = this.offscreenRGBCount;
-      while (index > 0) {
-        this.canvasBuffer.data[(index -= 4)] = 0xf8;
-        this.canvasBuffer.data[index + 1] = 0xf8;
-        this.canvasBuffer.data[index + 2] = 0xf8;
-        this.canvasBuffer.data[index + 3] = 0xff;
-      }
-      this.graphicsBlit();
-      this.canvas.style.visibility = "visible";
-      if (this.swizzledFrame == null) {
-        this.swizzledFrame = new Uint8Array(69120).fill(0xff);
-      }
-      //Test the draw system and browser vblank latching:
-      this.drewFrame = true; //Copy the latest graphics to buffer.
-      this.requestDraw();
-    } catch (error) {
-      throw new Error(
-        "HTML5 Canvas support required: " +
-          error.message +
-          "file: " +
-          error.fileName +
-          ", line: " +
-          error.lineNumber
+    if (
+      canvasStyle === null ||
+      (canvasStyle !== null && !canvasStyle.includes(`image-rendering`))
+    ) {
+      this.canvas.setAttribute(
+        "style",
+        (this.canvas.getAttribute("style") || "") +
+          "; image-rendering: " +
+          (settings[13] ? "auto" : "-webkit-optimize-contrast") +
+          ";" +
+          "; image-rendering: " +
+          (settings[13] ? "auto" : "pixelated") +
+          ";" +
+          "image-rendering: " +
+          (settings[13] ? "optimizeQuality" : "-o-crisp-edges") +
+          ";" +
+          "image-rendering: " +
+          (settings[13] ? "optimizeQuality" : "-moz-crisp-edges") +
+          ";" +
+          "-ms-interpolation-mode: " +
+          (settings[13] ? "bicubic" : "nearest-neighbor") +
+          ";"
       );
     }
+
+    //Get a CanvasPixelArray buffer:
+    if (this.drawContext !== null) {
+      this.canvasBuffer = this.drawContext.createImageData(
+        this.width,
+        this.height
+      );
+    }
+
+    var index = this.RGBCount;
+    while (index > 0) {
+      this.canvasBuffer.data[(index -= 4)] = 0xf8;
+      this.canvasBuffer.data[index + 1] = 0xf8;
+      this.canvasBuffer.data[index + 2] = 0xf8;
+      this.canvasBuffer.data[index + 3] = 0xff;
+    }
+    this.graphicsBlit();
+
+    if (this.swizzledFrame == null) {
+      this.swizzledFrame = new Uint8Array(69120).fill(0xff);
+    }
+    //Test the draw system and browser vblank latching:
+    this.drewFrame = true; //Copy the latest graphics to buffer.
+    this.requestDraw();
   }
 
   graphicsBlit() {
-    if (
-      this.offscreenWidth == this.onscreenWidth &&
-      this.offscreenHeight == this.onscreenHeight
-    ) {
-      this.drawContextOnscreen !== null &&
-        this.drawContextOnscreen.putImageData(this.canvasBuffer, 0, 0);
-    } else {
-      this.drawContextOffscreen !== null &&
-        this.drawContextOffscreen.putImageData(this.canvasBuffer, 0, 0);
-      this.drawContextOnscreen !== null &&
-        this.drawContextOnscreen.drawImage(
-          this.canvasOffscreen,
-          0,
-          0,
-          this.onscreenWidth,
-          this.onscreenHeight
-        );
-    }
+    this.drawContext !== null &&
+      this.drawContext.putImageData(this.canvasBuffer, 0, 0);
   }
 
   JoyPadEvent(key: number, down: boolean) {
@@ -8329,14 +8272,14 @@ class GameBoyCore {
   }
 
   dispatchDraw() {
-    if (this.offscreenRGBCount > 0) {
+    if (this.RGBCount > 0) {
       //We actually updated the graphics internally, so copy out:
       this.processDraw(this.swizzledFrame);
     }
   }
 
   processDraw(frameBuffer: Uint8Array) {
-    var canvasRGBALength = this.offscreenRGBCount;
+    var canvasRGBALength = this.RGBCount;
     var canvasData = this.canvasBuffer.data;
     var bufferIndex = 0;
     for (var canvasIndex = 0; canvasIndex < canvasRGBALength; ++canvasIndex) {
@@ -12706,7 +12649,7 @@ export var settings: [
   1, //Volume level set.
   true, //Colorize GB mode?
   false, //Disallow typed arrays?
-  8, //Interval for the emulator loop.
+  FRAME_INTERVAL, //Interval for the emulator loop.
   10, //Audio buffer minimum span amount over x interpreter iterations.
   20, //Audio buffer maximum span amount over x interpreter iterations.
   false, //Override to allow for MBC1 instead of ROM only (compatibility for broken 3rd-party cartridges).
@@ -12830,36 +12773,21 @@ export const saveValue: {
 
 export function saveState(slot: number | string | undefined) {
   if (GameBoyEmulatorInitialized()) {
-    try {
-      var state_suffix = typeof slot !== "undefined" ? slot : 0;
-      while (
-        typeof slot === "undefined" &&
-        typeof state_suffix === "number" &&
-        findValue("FREEZE_" + gameboy.name + "_" + state_suffix) != null
-      ) {
-        state_suffix++;
-      }
-
-      const deviceState = gameboy.saveState();
-
-      setValue(
-        "FREEZE_" + gameboy.name + "_" + state_suffix,
-        deviceState.state
-      );
-      // cout("Saved the current state as: FREEZE_" + gameboy.name + "_" + state_suffix, 0);
-
-      return deviceState;
-    } catch (error) {
-      cout(
-        'Could not save the current emulation state("' + error.message + '").',
-        2
-      );
-
-      return {
-        sram: new Uint8Array(0),
-        rtc: []
-      };
+    var state_suffix = typeof slot !== "undefined" ? slot : 0;
+    while (
+      typeof slot === "undefined" &&
+      typeof state_suffix === "number" &&
+      findValue("FREEZE_" + gameboy.name + "_" + state_suffix) != null
+    ) {
+      state_suffix++;
     }
+
+    const deviceState = gameboy.saveState();
+
+    setValue("FREEZE_" + gameboy.name + "_" + state_suffix, deviceState.state);
+    // cout("Saved the current state as: FREEZE_" + gameboy.name + "_" + state_suffix, 0);
+
+    return deviceState;
   } else {
     cout("GameBoy core cannot be saved while it has not been initialized.", 1);
 
@@ -12872,21 +12800,12 @@ export function saveState(slot: number | string | undefined) {
 function saveSRAM(cacheSRAM: Uint8Array) {
   if (GameBoyEmulatorInitialized()) {
     if (gameboy.cBATT) {
-      try {
-        var sram = cacheSRAM || gameboy.saveSRAMState();
-        if (sram.length > 0) {
-          // cout("Saving the SRAM...", 0);
-          setValue("SRAM_" + gameboy.name, sram);
-        } else {
-          cout("SRAM could not be saved because it was empty.", 1);
-        }
-      } catch (error) {
-        cout(
-          'Could not save the current emulation state("' +
-            error.message +
-            '").',
-          2
-        );
+      var sram = cacheSRAM || gameboy.saveSRAMState();
+      if (sram.length > 0) {
+        // cout("Saving the SRAM...", 0);
+        setValue("SRAM_" + gameboy.name, sram);
+      } else {
+        cout("SRAM could not be saved because it was empty.", 1);
       }
     } else {
       // cout("Cannot save a game that does not have battery backed SRAM specified.", 1);
@@ -12900,18 +12819,9 @@ function saveRTC(cacheRTC?: (number | boolean)[]) {
   //Execute this when SRAM is being saved as well.
   if (GameBoyEmulatorInitialized()) {
     if (gameboy.cTIMER) {
-      try {
-        // cout("Saving the RTC...", 0);
-        const rtc = cacheRTC || gameboy.saveRTCState();
-        setValue("RTC_" + gameboy.name, rtc);
-      } catch (error) {
-        cout(
-          'Could not save the RTC of the current emulation state("' +
-            error.message +
-            '").',
-          2
-        );
-      }
+      // cout("Saving the RTC...", 0);
+      const rtc = cacheRTC || gameboy.saveRTCState();
+      setValue("RTC_" + gameboy.name, rtc);
     }
   } else {
     cout("GameBoy core cannot be saved while it has not been initialized.", 1);
@@ -12932,29 +12842,23 @@ export function autoSave() {
   return;
 }
 function openSRAM(filename: string) {
-  try {
-    if (findValue("SRAM_" + filename) != null) {
-      cout("Found a previous SRAM state (Will attempt to load).", 0);
-      return findValue("SRAM_" + filename);
-    } else {
-      cout("Could not find any previous SRAM copy for the current ROM.", 0);
-    }
-  } catch (error) {
-    cout("Could not open the  SRAM of the saved emulation state.", 2);
+  if (findValue("SRAM_" + filename) != null) {
+    cout("Found a previous SRAM state (Will attempt to load).", 0);
+    return findValue("SRAM_" + filename);
+  } else {
+    cout("Could not find any previous SRAM copy for the current ROM.", 0);
   }
+
   return [];
 }
 function openRTC(filename: string) {
-  try {
-    if (findValue("RTC_" + filename) != null) {
-      cout("Found a previous RTC state (Will attempt to load).", 0);
-      return findValue("RTC_" + filename);
-    } else {
-      cout("Could not find any previous RTC copy for the current ROM.", 0);
-    }
-  } catch (error) {
-    cout("Could not open the RTC data of the saved emulation state.", 2);
+  if (findValue("RTC_" + filename) != null) {
+    cout("Found a previous RTC state (Will attempt to load).", 0);
+    return findValue("RTC_" + filename);
+  } else {
+    cout("Could not find any previous RTC copy for the current ROM.", 0);
   }
+
   return [];
 }
 export function openState(
@@ -12964,25 +12868,17 @@ export function openState(
 ) {
   const filename = "FREEZE_" + gameboy.name + "_" + slot;
 
-  try {
-    if (findValue(filename) != null) {
-      try {
-        clearLastEmulation();
-        cout("Attempting to run a saved emulation state.", 0);
-        const { ROM } = gameboy;
-        gameboy = new GameBoyCore(canvas, new Uint8Array(0), stringROM);
-        gameboy.ROM = ROM;
-        gameboy.savedStateFileName = filename;
-        gameboy.returnFromState(findValue(filename), false);
-        run();
-      } catch (error) {
-        console.error(error);
-      }
-    } else {
-      cout("Could not find the save state " + filename + '".', 2);
-    }
-  } catch (error) {
-    cout("Could not open the saved emulation state.", 2);
+  if (findValue(filename) != null) {
+    clearLastEmulation();
+    cout("Attempting to run a saved emulation state.", 0);
+    const { ROM } = gameboy;
+    gameboy = new GameBoyCore(canvas, new Uint8Array(0), stringROM);
+    gameboy.ROM = ROM;
+    gameboy.savedStateFileName = filename;
+    gameboy.returnFromState(findValue(filename), false);
+    run();
+  } else {
+    cout("Could not find the save state " + filename + '".', 2);
   }
 }
 
@@ -13008,15 +12904,9 @@ export function GameBoyJoyPadEvent(keycode: number, down: boolean) {
 //     } else {
 //       gameboy.GyroEvent(e.x, e.y);
 //     }
-//     try {
+
+//     if (e.preventDefault !== undefined) {
 //       e.preventDefault();
-//     } catch (error) {}
+//     }
 //   }
 // }
-//The emulator will call this to sort out the canvas properties for (re)initialization.
-function initNewCanvas() {
-  if (GameBoyEmulatorInitialized()) {
-    gameboy.canvas.width = !settings[12] ? 160 : gameboy.canvas.clientWidth;
-    gameboy.canvas.height = !settings[12] ? 144 : gameboy.canvas.clientHeight;
-  }
-}
