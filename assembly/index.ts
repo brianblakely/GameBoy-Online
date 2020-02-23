@@ -1,5 +1,13 @@
 import { XAudioServer } from "./audio";
 
+// Declare external imports.
+declare namespace console {
+  function debug(msg: string): void;
+  function info(msg: string): void;
+  function warn(msg: string): void;
+  function error(msg: string): void;
+}
+
 //JavaScript Image Resizer (c) 2012 - Grant Galitz
 var scripts = document.getElementsByTagName("script");
 var sourceOfWorker: string = scripts[scripts.length - 1]?.src ?? "";
@@ -682,13 +690,6 @@ class Resize {
       );
     }
   }
-}
-
-declare namespace console {
-    function debug(msg: string): void;
-    function info(msg: string): void;
-    function warn(msg: string): void;
-    function error(msg: string): void;
 }
 
 /*
@@ -13532,18 +13533,20 @@ function findValue(key: string) {
   return persistValues[key];
 }
 
+type SaveValueCallback = (key: string, value: any) => void;
+
 export const saveValue: {
-  callbacks: { (key: string, value: any): void }[];
-  push: (key: string, value: any) => void;
-  subscribe: (callback: (key: string, value: any) => void) => void;
+  callbacks: Array<SaveValueCallback>;
+  push: SaveValueCallback;
+  subscribe: (callback: SaveValueCallback) => void;
 } = {
   callbacks: [],
 
   push(key, value) {
     if (this.callbacks.length) {
-      for (const callback of this.callbacks) {
+      this.callbacks.forEach(callback => {
         callback(key, value);
-      }
+      });
     }
   },
 
