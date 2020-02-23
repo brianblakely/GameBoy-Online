@@ -45,6 +45,10 @@ function cout(message: string, level: number) {
       break;
   }
 }
+
+const GBWIDTH = 160;
+const GBHEIGHT = 144;
+
 class GameBoyCore {
   //Params, etc...
   canvas: HTMLCanvasElement; //Canvas DOM object for drawing out the graphics to.
@@ -314,11 +318,11 @@ class GameBoyCore {
   canvasBuffer: ImageData; //imageData handle
   pixelStart = 0; //Temp variable for holding the current working framebuffer offset.
   //Variables used for scaling in JS:
-  onscreenWidth: number;
-  offscreenWidth: number;
-  onscreenHeight: number;
-  offscreenHeight: number;
-  offscreenRGBCount: number;
+  readonly onscreenWidth: number = GBWIDTH;
+  readonly offscreenWidth: number = GBWIDTH;
+  readonly onscreenHeight: number = GBHEIGHT;
+  readonly offscreenHeight: number = GBHEIGHT;
+  readonly offscreenRGBCount: number = GBWIDTH * GBHEIGHT * 4;
   channel1FrequencyTracker = 0x2000;
   channel1DutyTracker = 0;
   channel1CachedDuty: boolean[];
@@ -6857,12 +6861,6 @@ class GameBoyCore {
 
   recomputeDimension() {
     initNewCanvas();
-    //Cache some dimension info:
-    this.onscreenWidth = this.canvas.width;
-    this.onscreenHeight = this.canvas.height;
-    this.offscreenWidth = !settings[12] ? 160 : this.canvas.width;
-    this.offscreenHeight = !settings[12] ? 144 : this.canvas.height;
-    this.offscreenRGBCount = this.offscreenWidth * this.offscreenHeight * 4;
   }
 
   initLCD() {
@@ -12715,7 +12713,7 @@ export var settings: [
   false, //Override MBC RAM disabling and always allow reading and writing to the banks.
   false, //Use the GameBoy boot ROM instead of the GameBoy Color boot ROM.
   false, //Scale the canvas in JS, or let the browser scale the canvas?
-  true, //Use image smoothing based scaling?
+  false, //Use image smoothing based scaling?
   [true, true, true, true] //User controlled channel enables.
 ];
 export function start(
@@ -13020,22 +13018,5 @@ function initNewCanvas() {
   if (GameBoyEmulatorInitialized()) {
     gameboy.canvas.width = !settings[12] ? 160 : gameboy.canvas.clientWidth;
     gameboy.canvas.height = !settings[12] ? 144 : gameboy.canvas.clientHeight;
-  }
-}
-//Call this when resizing the canvas:
-export function initNewCanvasSize() {
-  if (GameBoyEmulatorInitialized()) {
-    if (!settings[12]) {
-      if (gameboy.onscreenWidth != 160 || gameboy.onscreenHeight != 144) {
-        gameboy.initLCD();
-      }
-    } else {
-      if (
-        gameboy.onscreenWidth != gameboy.canvas.clientWidth ||
-        gameboy.onscreenHeight != gameboy.canvas.clientHeight
-      ) {
-        gameboy.initLCD();
-      }
-    }
   }
 }
