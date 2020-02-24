@@ -8,6 +8,10 @@ declare namespace console {
   function error(msg: string): void;
 }
 
+declare namespace renderingBuffer {
+  function set(buffer: Uint8ClampedArray): void;
+}
+
 /*
  * JavaScript GameBoy Color Emulator
  * Copyright (C) 2010 - 2012 Grant Galitz
@@ -56,7 +60,6 @@ const GBHEIGHT = 144;
 
 class GameBoyCore {
   //Params, etc...
-  canvas: HTMLCanvasElement; //Canvas DOM object for drawing out the graphics to.
   ROMImage: Uint8Array; //The game's ROM.
   //CPU Registers and Flags:
   registerA = 0x01; //Register A (Accumulator)
@@ -319,7 +322,7 @@ class GameBoyCore {
   SpriteLayerRender: (scanlineToRender: number) => void; //Reference to the OAM rendering function.
   frameBuffer: Int32Array = new Int32Array(0); //The internal frame-buffer.
   swizzledFrame: Uint8Array; //The secondary gfx buffer that holds the converted RGBA values.
-  canvasBuffer: ImageData; //imageData handle
+  canvasBuffer: Uint8ClampedArray; //imageData handle
   pixelStart = 0; //Temp variable for holding the current working framebuffer offset.
   //Variables used for scaling in JS:
   readonly width: number = GBWIDTH;
@@ -389,7 +392,6 @@ class GameBoyCore {
   openRTC: (name: string) => any[];
   clocksPerSecond: number;
   openMBC: (name: string) => Uint8Array;
-  drawContext: CanvasRenderingContext2D | null;
   audioResamplerFirstPassFactor: number;
   downSampleInputDivider: number;
   audioBuffer: Float32Array;
@@ -397,12 +399,7 @@ class GameBoyCore {
   OAMAddressCache: Int32Array;
   channel3envelopeVolume: number;
 
-  constructor(
-    canvas: HTMLCanvasElement,
-    ROMImage: Uint8Array,
-    stringROM: string
-  ) {
-    this.canvas = canvas;
+  constructor(ROMImage: Uint8Array, stringROM: string) {
     this.ROMImage = ROMImage;
 
     for (var index = 0x134; index < 0x13f; index++) {
@@ -6856,49 +6853,15 @@ class GameBoyCore {
   }
 
   initLCD() {
-    this.drawContext = this.canvas.getContext("2d");
-
-    const canvasStyle = this.canvas.getAttribute("style");
-
-    if (
-      canvasStyle === null ||
-      (canvasStyle !== null && !canvasStyle.includes(`image-rendering`))
-    ) {
-      this.canvas.setAttribute(
-        "style",
-        (this.canvas.getAttribute("style") || "") +
-          "; image-rendering: " +
-          (settings[13] ? "auto" : "-webkit-optimize-contrast") +
-          ";" +
-          "; image-rendering: " +
-          (settings[13] ? "auto" : "pixelated") +
-          ";" +
-          "image-rendering: " +
-          (settings[13] ? "optimizeQuality" : "-o-crisp-edges") +
-          ";" +
-          "image-rendering: " +
-          (settings[13] ? "optimizeQuality" : "-moz-crisp-edges") +
-          ";" +
-          "-ms-interpolation-mode: " +
-          (settings[13] ? "bicubic" : "nearest-neighbor") +
-          ";"
-      );
-    }
-
     //Get a CanvasPixelArray buffer:
-    if (this.drawContext !== null) {
-      this.canvasBuffer = this.drawContext.createImageData(
-        this.width,
-        this.height
-      );
-    }
+    this.canvasBuffer = new Uint8ClampedArray(this.RGBCount);
 
     var index = this.RGBCount;
     while (index > 0) {
-      this.canvasBuffer.data[(index -= 4)] = 0xf8;
-      this.canvasBuffer.data[index + 1] = 0xf8;
-      this.canvasBuffer.data[index + 2] = 0xf8;
-      this.canvasBuffer.data[index + 3] = 0xff;
+      this.canvasBuffer[(index -= 4)] = 0xf8;
+      this.canvasBuffer[index + 1] = 0xf8;
+      this.canvasBuffer[index + 2] = 0xf8;
+      this.canvasBuffer[index + 3] = 0xff;
     }
     this.executeDraw();
 
@@ -6911,8 +6874,7 @@ class GameBoyCore {
   }
 
   executeDraw() {
-    this.drawContext !== null &&
-      this.drawContext.putImageData(this.canvasBuffer, 0, 0);
+    renderingBuffer.set(this.canvasBuffer);
   }
 
   JoyPadEvent(key: number, down: boolean) {
@@ -8280,7 +8242,7 @@ class GameBoyCore {
 
   processDraw(frameBuffer: Uint8Array) {
     var canvasRGBALength = this.RGBCount;
-    var canvasData = this.canvasBuffer.data;
+    var canvasData = this.canvasBuffer;
     var bufferIndex = 0;
     for (var canvasIndex = 0; canvasIndex < canvasRGBALength; ++canvasIndex) {
       canvasData[canvasIndex++] = frameBuffer[bufferIndex++];
@@ -12666,7 +12628,7 @@ export function start(
 ) {
   clearLastEmulation();
   autoSave(); //If we are about to load a new game, then save the last one...
-  gameboy = new GameBoyCore(canvas, ROM, stringROM);
+  gameboy = new GameBoyCore(ROM, stringROM);
   gameboy.openMBC = openSRAM;
   gameboy.openRTC = openRTC;
   gameboy.start();
@@ -12872,7 +12834,7 @@ export function openState(
     clearLastEmulation();
     cout("Attempting to run a saved emulation state.", 0);
     const { ROM } = gameboy;
-    gameboy = new GameBoyCore(canvas, new Uint8Array(0), stringROM);
+    gameboy = new GameBoyCore(new Uint8Array(0), stringROM);
     gameboy.ROM = ROM;
     gameboy.savedStateFileName = filename;
     gameboy.returnFromState(findValue(filename), false);
