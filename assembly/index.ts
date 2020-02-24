@@ -6900,7 +6900,7 @@ class GameBoyCore {
       this.canvasBuffer.data[index + 2] = 0xf8;
       this.canvasBuffer.data[index + 3] = 0xff;
     }
-    this.graphicsBlit();
+    this.executeDraw();
 
     if (this.swizzledFrame == null) {
       this.swizzledFrame = new Uint8Array(69120).fill(0xff);
@@ -6910,7 +6910,7 @@ class GameBoyCore {
     this.requestDraw();
   }
 
-  graphicsBlit() {
+  executeDraw() {
     this.drawContext !== null &&
       this.drawContext.putImageData(this.canvasBuffer, 0, 0);
   }
@@ -8287,7 +8287,7 @@ class GameBoyCore {
       canvasData[canvasIndex++] = frameBuffer[bufferIndex++];
       canvasData[canvasIndex++] = frameBuffer[bufferIndex++];
     }
-    this.graphicsBlit();
+    this.executeDraw();
     this.drewFrame = false;
   }
 
