@@ -55,6 +55,10 @@ const CLOCK_CYCLES_PER_FRAME = 70224;
 const FRAMERATE = CYCLES_PER_SECOND / CLOCK_CYCLES_PER_FRAME;
 const FRAME_INTERVAL = 1000 / FRAMERATE;
 
+// Audio buffer minimum/maximum span amount over N interpreter iterations.
+const AUDIO_BUFFER_SPAN_MIN = 10;
+const AUDIO_BUFFER_SPAN_MAX = 20;
+
 const GBWIDTH = 160;
 const GBHEIGHT = 144;
 
@@ -169,6 +173,7 @@ class GameBoyCore {
   lowY = 127;
   //Sound variables:
   audioHandle: XAudioServer; //XAudioJS handle
+  muted = false;
   numSamplesTotal = 0; //Length of the sound buffers.
   dutyLookup = [
     //Map the duty values given to ones we can work with.
@@ -6470,10 +6475,7 @@ class GameBoyCore {
   ROMLoad() {
     //Load the first two ROM banks (0x0000 - 0x7FFF) into regular gameboy memory:
     this.ROM = new Uint8Array(0);
-    this.usedBootROM =
-      settings[1] &&
-      ((!settings[11] && this.GBCBOOTROM.length == 0x800) ||
-        (settings[11] && this.GBBOOTROM.length == 0x100));
+    this.usedBootROM = this.GBCBOOTROM.length == 0x800;
     var maxLength = this.ROMImage.length;
     if (maxLength < 0x4000) {
       throw new Error("ROM image size too small.");
@@ -6481,27 +6483,20 @@ class GameBoyCore {
     this.ROM = new Uint8Array(maxLength);
     var romIndex = 0;
     if (this.usedBootROM) {
-      if (!settings[11]) {
-        //Patch in the GBC boot ROM into the memory map:
-        for (; romIndex < 0x100; ++romIndex) {
-          this.memory[romIndex] = this.GBCBOOTROM[romIndex]; //Load in the GameBoy Color BOOT ROM.
-          this.ROM[romIndex] = this.ROMImage[romIndex]; //Decode the ROM binary for the switch out.
-        }
-        for (; romIndex < 0x200; ++romIndex) {
-          this.memory[romIndex] = this.ROM[romIndex] = this.ROMImage[romIndex]; //Load in the game ROM.
-        }
-        for (; romIndex < 0x900; ++romIndex) {
-          this.memory[romIndex] = this.GBCBOOTROM[romIndex - 0x100]; //Load in the GameBoy Color BOOT ROM.
-          this.ROM[romIndex] = this.ROMImage[romIndex]; //Decode the ROM binary for the switch out.
-        }
-        this.usedGBCBootROM = true;
-      } else {
-        //Patch in the GBC boot ROM into the memory map:
-        for (; romIndex < 0x100; ++romIndex) {
-          this.memory[romIndex] = this.GBBOOTROM[romIndex]; //Load in the GameBoy Color BOOT ROM.
-          this.ROM[romIndex] = this.ROMImage[romIndex]; //Decode the ROM binary for the switch out.
-        }
+      //Patch in the GBC boot ROM into the memory map:
+      for (; romIndex < 0x100; ++romIndex) {
+        this.memory[romIndex] = this.GBCBOOTROM[romIndex]; //Load in the GameBoy Color BOOT ROM.
+        this.ROM[romIndex] = this.ROMImage[romIndex]; //Decode the ROM binary for the switch out.
       }
+      for (; romIndex < 0x200; ++romIndex) {
+        this.memory[romIndex] = this.ROM[romIndex] = this.ROMImage[romIndex]; //Load in the game ROM.
+      }
+      for (; romIndex < 0x900; ++romIndex) {
+        this.memory[romIndex] = this.GBCBOOTROM[romIndex - 0x100]; //Load in the GameBoy Color BOOT ROM.
+        this.ROM[romIndex] = this.ROMImage[romIndex]; //Decode the ROM binary for the switch out.
+      }
+      this.usedGBCBootROM = true;
+
       for (; romIndex < 0x4000; ++romIndex) {
         this.memory[romIndex] = this.ROM[romIndex] = this.ROMImage[romIndex]; //Load in the game ROM.
       }
@@ -6542,10 +6537,8 @@ class GameBoyCore {
     switch (this.cartridgeType) {
       case 0x00:
         //ROM w/o bank switching
-        if (!settings[9]) {
-          MBCType = "ROM";
-          break;
-        }
+        MBCType = "ROM";
+        break;
       case 0x01:
         this.cMBC1 = true;
         MBCType = "MBC1";
@@ -6711,8 +6704,8 @@ class GameBoyCore {
           break;
         case 0x32: //Exception to the GBC identifying code:
           if (
-            !settings[2] &&
-            this.name + this.gameCode + this.ROM[0x143] == "Game and Watch 50"
+            this.name + this.gameCode + this.ROM[0x143] ==
+            "Game and Watch 50"
           ) {
             this.cGBC = true;
             cout(
@@ -6724,7 +6717,7 @@ class GameBoyCore {
           }
           break;
         case 0x80: //Both GB + GBC modes
-          this.cGBC = !settings[2];
+          this.cGBC = true;
           cout("GB and GBC mode detected.", 0);
           break;
         case 0xc0: //Only GBC mode
@@ -6787,7 +6780,7 @@ class GameBoyCore {
     //Emulator Timing:
     this.clocksPerSecond = this.emulatorSpeed * 0x400000;
     this.baseCPUCyclesPerIteration =
-      (this.clocksPerSecond / 1000) * settings[6];
+      (this.clocksPerSecond / 1000) * FRAME_INTERVAL;
     this.CPUCyclesTotalRoundoff = this.baseCPUCyclesPerIteration % 4;
     this.CPUCyclesTotalBase = this.CPUCyclesTotal =
       (this.baseCPUCyclesPerIteration - this.CPUCyclesTotalRoundoff) | 0;
@@ -6916,20 +6909,20 @@ class GameBoyCore {
     );
     this.downSampleInputDivider =
       1 / (this.audioResamplerFirstPassFactor * 0xf0);
-    if (settings[0]) {
+    if (!this.muted) {
       this.audioHandle = new XAudioServer(
         2,
         this.clocksPerSecond / this.audioResamplerFirstPassFactor,
         0,
         Math.max(
-          (this.baseCPUCyclesPerIteration * settings[8]) /
+          (this.baseCPUCyclesPerIteration * AUDIO_BUFFER_SPAN_MAX) /
             this.audioResamplerFirstPassFactor,
           8192
         ) << 1,
-        settings[3],
+        1,
         undefined,
-        function() {
-          settings[0] = false;
+        () => {
+          this.muted = true;
         }
       );
       this.initAudioBuffer();
@@ -6946,8 +6939,8 @@ class GameBoyCore {
   }
 
   changeVolume() {
-    if (settings[0] && this.audioHandle) {
-      this.audioHandle.changeVolume(settings[3]);
+    if (!this.muted && this.audioHandle) {
+      this.audioHandle.changeVolume(1);
     }
   }
 
@@ -6957,7 +6950,7 @@ class GameBoyCore {
     this.downsampleInput = 0;
     this.bufferContainAmount =
       Math.max(
-        (this.baseCPUCyclesPerIteration * settings[7]) /
+        (this.baseCPUCyclesPerIteration * AUDIO_BUFFER_SPAN_MIN) /
           this.audioResamplerFirstPassFactor,
         4096
       ) << 1;
@@ -7028,7 +7021,7 @@ class GameBoyCore {
   }
 
   audioUnderrunAdjustment() {
-    if (settings[0]) {
+    if (!this.muted) {
       var underrunAmount = this.audioHandle.remainingBuffer();
       if (typeof underrunAmount == "number") {
         underrunAmount = this.bufferContainAmount - Math.max(underrunAmount, 0);
@@ -7200,7 +7193,7 @@ class GameBoyCore {
 
   audioJIT() {
     //Audio Sample Generation Timing:
-    if (settings[0]) {
+    if (!this.muted) {
       this.generateAudio(this.audioTicks);
     } else {
       this.generateAudioFake(this.audioTicks);
@@ -7496,7 +7489,7 @@ class GameBoyCore {
   }
 
   channel1OutputLevelTrimaryCache() {
-    if (this.channel1CachedDuty[this.channel1DutyTracker] && settings[14][0]) {
+    if (this.channel1CachedDuty[this.channel1DutyTracker]) {
       this.channel1currentSampleLeftTrimary = this.channel1currentSampleLeftSecondary;
       this.channel1currentSampleRightTrimary = this.channel1currentSampleRightSecondary;
     } else {
@@ -7541,7 +7534,7 @@ class GameBoyCore {
   }
 
   channel2OutputLevelTrimaryCache() {
-    if (this.channel2CachedDuty[this.channel2DutyTracker] && settings[14][1]) {
+    if (this.channel2CachedDuty[this.channel2DutyTracker]) {
       this.channel2currentSampleLeftTrimary = this.channel2currentSampleLeftSecondary;
       this.channel2currentSampleRightTrimary = this.channel2currentSampleRightSecondary;
     } else {
@@ -7569,7 +7562,7 @@ class GameBoyCore {
   }
 
   channel3OutputLevelSecondaryCache() {
-    if (this.channel3Enabled && settings[14][2]) {
+    if (this.channel3Enabled) {
       this.channel3currentSampleLeftSecondary = this.channel3currentSampleLeft;
       this.channel3currentSampleRightSecondary = this.channel3currentSampleRight;
     } else {
@@ -7603,7 +7596,7 @@ class GameBoyCore {
   }
 
   channel4OutputLevelSecondaryCache() {
-    if (this.channel4Enabled && settings[14][3]) {
+    if (this.channel4Enabled) {
       this.channel4currentSampleLeftSecondary = this.channel4currentSampleLeft;
       this.channel4currentSampleRightSecondary = this.channel4currentSampleRight;
     } else {
@@ -8367,21 +8360,14 @@ class GameBoyCore {
       0
     );
     this.tileCache.length = 0x700;
-    if (settings[4]) {
-      this.gbBGColorizedPalette = new Int32Array(4);
-      this.gbOBJColorizedPalette = new Int32Array(8);
-      this.cachedBGPaletteConversion = new Int32Array(4);
-      this.cachedOBJPaletteConversion = new Int32Array(8);
-      this.BGPalette = this.gbBGColorizedPalette;
-      this.OBJPalette = this.gbOBJColorizedPalette;
-      this.gbOBJPalette = this.gbBGPalette = new Int32Array(0);
-      this.getGBCColor();
-    } else {
-      this.gbOBJPalette = new Int32Array(8);
-      this.gbBGPalette = new Int32Array(4);
-      this.BGPalette = this.gbBGPalette;
-      this.OBJPalette = this.gbOBJPalette;
-    }
+    this.gbBGColorizedPalette = new Int32Array(4);
+    this.gbOBJColorizedPalette = new Int32Array(8);
+    this.cachedBGPaletteConversion = new Int32Array(4);
+    this.cachedOBJPaletteConversion = new Int32Array(8);
+    this.BGPalette = this.gbBGColorizedPalette;
+    this.OBJPalette = this.gbOBJColorizedPalette;
+    this.gbOBJPalette = this.gbBGPalette = new Int32Array(0);
+    this.getGBCColor();
     this.sortBuffer = new Uint8Array(0x100);
     this.OAMAddressCache = new Int32Array(10);
     this.renderPathBuild();
@@ -10630,7 +10616,7 @@ class GameBoyCore {
 
   memoryReadMBC(parentObj: GameBoyCore, address: number) {
     //Switchable RAM
-    if (parentObj.MBCRAMBanksEnabled || settings[10]) {
+    if (parentObj.MBCRAMBanksEnabled) {
       return parentObj.MBCRam[address + parentObj.currMBCRAMBankPosition];
     }
     //cout("Reading from disabled RAM.", 1);
@@ -10639,7 +10625,7 @@ class GameBoyCore {
 
   memoryReadMBC7(parentObj: GameBoyCore, address: number) {
     //Switchable RAM
-    if (parentObj.MBCRAMBanksEnabled || settings[10]) {
+    if (parentObj.MBCRAMBanksEnabled) {
       switch (address) {
         case 0xa000:
         case 0xa060:
@@ -10670,7 +10656,7 @@ class GameBoyCore {
 
   memoryReadMBC3(parentObj: GameBoyCore, address: number) {
     //Switchable RAM
-    if (parentObj.MBCRAMBanksEnabled || settings[10]) {
+    if (parentObj.MBCRAMBanksEnabled) {
       switch (parentObj.currMBCRAMBank) {
         case 0x00:
         case 0x01:
@@ -11024,13 +11010,13 @@ class GameBoyCore {
   }
 
   memoryWriteMBCRAM(parentObj: GameBoyCore, address: number, data: number) {
-    if (parentObj.MBCRAMBanksEnabled || settings[10]) {
+    if (parentObj.MBCRAMBanksEnabled) {
       parentObj.MBCRam[address + parentObj.currMBCRAMBankPosition] = data;
     }
   }
 
   memoryWriteMBC3RAM(parentObj: GameBoyCore, address: number, data: number) {
-    if (parentObj.MBCRAMBanksEnabled || settings[10]) {
+    if (parentObj.MBCRAMBanksEnabled) {
       switch (parentObj.currMBCRAMBank) {
         case 0x00:
         case 0x01:
@@ -12587,40 +12573,7 @@ class GameBoyCore {
 
 export var gameboy: GameBoyCore; //GameBoyCore object.
 export var gbRunInterval: NodeJS.Timeout; //GameBoyCore Timer
-export var settings: [
-  boolean,
-  boolean,
-  boolean,
-  number,
-  boolean,
-  boolean,
-  number,
-  number,
-  number,
-  boolean,
-  boolean,
-  boolean,
-  boolean,
-  boolean,
-  [boolean, boolean, boolean, boolean]
-] = [
-  //Some settings.
-  true, //Turn on sound.
-  true, //Boot with boot ROM first?
-  false, //Give priority to GameBoy mode
-  1, //Volume level set.
-  true, //Colorize GB mode?
-  false, //Disallow typed arrays?
-  FRAME_INTERVAL, //Interval for the emulator loop.
-  10, //Audio buffer minimum span amount over x interpreter iterations.
-  20, //Audio buffer maximum span amount over x interpreter iterations.
-  false, //Override to allow for MBC1 instead of ROM only (compatibility for broken 3rd-party cartridges).
-  false, //Override MBC RAM disabling and always allow reading and writing to the banks.
-  false, //Use the GameBoy boot ROM instead of the GameBoy Color boot ROM.
-  false, //Scale the canvas in JS, or let the browser scale the canvas?
-  false, //Use image smoothing based scaling?
-  [true, true, true, true] //User controlled channel enables.
-];
+
 export function start(
   canvas: HTMLCanvasElement,
   ROM: Uint8Array,
@@ -12663,7 +12616,7 @@ export function run() {
         if (!document.hidden) {
           gameboy.run(false);
         }
-      }, settings[6]);
+      }, FRAME_INTERVAL);
     } else {
       cout("The GameBoy core is already running.", 1);
     }
